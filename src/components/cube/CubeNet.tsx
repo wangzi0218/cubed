@@ -3,6 +3,10 @@ import type { CubeSize, CubeState, FaceColor } from "@/types/cube";
 import { FACE_COLORS, FACE_ORDER } from "@/types/cube";
 import { getSticker, setSticker } from "@/lib/cube-state";
 
+const FACE_CHINESE: Record<string, string> = {
+  U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
+};
+
 interface CubeNetProps {
   state: CubeState;
   size: CubeSize;
@@ -112,7 +116,7 @@ export function ColorPalette({ selectedColor, onSelect, showFaceLabel }: ColorPa
               className="absolute inset-0 flex items-center justify-center text-xs font-bold"
               style={{ color: face === "U" ? "#000" : "#fff" }}
             >
-              {face}
+              {FACE_CHINESE[face] ?? face}
             </span>
           )}
         </button>

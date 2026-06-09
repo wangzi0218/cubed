@@ -38,6 +38,10 @@ import {
 type Phase = "intro" | "capture" | "assign" | "review";
 type CubeVariant = "standard" | "pattern";
 
+const FACE_CHINESE: Record<string, string> = {
+  U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
+};
+
 export function PatternInput() {
   const { cubeSize, setAppStep } = useCubeStore();
 
@@ -584,7 +588,7 @@ function PatternStickerGrid({
                       color: color === "U" ? "#000" : "#fff",
                     }}
                   >
-                    {color}
+                    {FACE_CHINESE[color] ?? color}
                   </span>
                 )}
               </button>
