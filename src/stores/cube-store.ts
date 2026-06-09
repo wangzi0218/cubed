@@ -31,6 +31,10 @@ interface CubeStore {
   currentState: CubeState;
   setCurrentState: (state: CubeState) => void;
 
+  // Sticker images (pattern/photo input) — persisted for 3D preview
+  stickerImages?: string[];
+  setStickerImages: (images: string[] | undefined) => void;
+
   // Solution
   solution: string | null;
   solutionSteps: SolutionStep[];
@@ -65,6 +69,9 @@ export const useCubeStore = create<CubeStore>((set, get) => ({
 
   currentState: createSolvedState(3),
   setCurrentState: (state) => set({ currentState: state }),
+
+  stickerImages: undefined,
+  setStickerImages: (images) => set({ stickerImages: images }),
 
   solution: null,
   solutionSteps: [],
@@ -110,6 +117,7 @@ export const useCubeStore = create<CubeStore>((set, get) => ({
       cubeSize: 3,
       inputMethod: "manual",
       currentState: createSolvedState(3),
+      stickerImages: undefined,
       solution: null,
       solutionSteps: [],
       currentStepIndex: -1,

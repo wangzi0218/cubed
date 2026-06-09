@@ -52,11 +52,11 @@ export function PatternInput() {
     () => createSolvedState(cubeSize)
   );
 
-  const { error, solve, clearError } = useSolve(stickerColors, cubeSize);
-
   const stickerImages = stickers.flat().every((s) => s !== null)
     ? (stickers.flat() as string[])
     : undefined;
+
+  const { error, solve, clearError } = useSolve(stickerColors, cubeSize, stickerImages);
 
   useEffect(() => {
     if (phase !== "review") return;

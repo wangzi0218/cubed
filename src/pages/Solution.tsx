@@ -17,6 +17,7 @@ export function Solution() {
     isPlaying,
     flowOrigin,
     currentState: storeState,
+    stickerImages,
     setCurrentStepIndex,
     setIsPlaying,
     setAppStep,
@@ -87,7 +88,7 @@ export function Solution() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
         <div className="w-64 h-64">
-          <CubeViewer state={currentState} size={cubeSize} />
+          <CubeViewer state={currentState} size={cubeSize} stickerImages={stickerImages} />
         </div>
         <p className="text-lg font-medium text-success">魔方已经是还原状态</p>
         <Button variant="outline" onClick={handleBack}>
@@ -117,6 +118,7 @@ export function Solution() {
               <CubeViewer
                 state={currentState}
                 size={cubeSize}
+                stickerImages={stickerImages}
                 currentMove={animatingMove}
                 moveProgress={moveProgress}
               />
