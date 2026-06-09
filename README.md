@@ -1,73 +1,39 @@
-# React + TypeScript + Vite
+# Cubed
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Web 端魔方求解器，支持 2x2 和 3x3 魔方。拍摄或手动输入魔方状态，即可获得还原步骤和 3D 动画演示。
 
-Currently, two official plugins are available:
+## 功能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **四种输入方式**
+  - 拍照识别：拍摄 6 个面，自动检测颜色
+  - 图案识别：拍摄后手动修正颜色，适用于非标准配色魔方
+  - 拓扑拼合：拍摄棱/角交界处，通过颜色空间关系推断状态
+  - 手动输入：在展开图上逐格涂色
+- **求解引擎**：基于 rubik-solver，生成最优还原步骤
+- **3D 预览**：Three.js 渲染，拖拽旋转查看魔方状态
+- **步骤动画**：逐步播放还原过程，支持暂停/快进/回退
+- **打乱功能**：一键生成随机打乱序列并演示
 
-## React Compiler
+## 技术栈
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 18 + TypeScript
+- Tailwind CSS 4
+- Zustand（状态管理）
+- Three.js / React Three Fiber（3D 渲染）
+- Vitest（单元测试）
 
-## Expanding the ESLint configuration
+## 开发
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev        # 启动开发服务器
+npm run test       # 运行测试
+npm run build      # 生产构建
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 部署
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Cloudflare Pages 配置：
+- Framework preset: Vite
+- Build command: `npm run build`
+- Output directory: `dist`

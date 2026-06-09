@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyRotation, buildPatternState, allFacesAssigned } from "../pattern-extraction";
+import { applyRotation, allFacesAssigned } from "../pattern-extraction";
 import type { FaceAssignment } from "../pattern-extraction";
 
 describe("applyRotation", () => {
@@ -61,47 +61,6 @@ describe("applyRotation", () => {
       result = applyRotation(result, 3, 90);
     }
     expect(result).toEqual(grid);
-  });
-});
-
-describe("buildPatternState", () => {
-  it("returns solved state when all faces assigned", () => {
-    const assignments: FaceAssignment[] = Array.from({ length: 6 }, (_, i) => ({
-      photoIndex: i,
-      rotation: 0 as const,
-    }));
-    const state = buildPatternState(assignments, 3);
-    expect(state).toHaveLength(54);
-    // Each face should have its own color
-    expect(state.slice(0, 9).every((c) => c === "U")).toBe(true);
-    expect(state.slice(9, 18).every((c) => c === "R")).toBe(true);
-    expect(state.slice(18, 27).every((c) => c === "F")).toBe(true);
-    expect(state.slice(27, 36).every((c) => c === "D")).toBe(true);
-    expect(state.slice(36, 45).every((c) => c === "L")).toBe(true);
-    expect(state.slice(45, 54).every((c) => c === "B")).toBe(true);
-  });
-
-  it("returns 24 stickers for 2x2", () => {
-    const assignments: FaceAssignment[] = Array.from({ length: 6 }, (_, i) => ({
-      photoIndex: i,
-      rotation: 0 as const,
-    }));
-    const state = buildPatternState(assignments, 2);
-    expect(state).toHaveLength(24);
-  });
-
-  it("unassigned faces still get their own color", () => {
-    const assignments: (FaceAssignment | null)[] = [
-      { photoIndex: 0, rotation: 0 },
-      null,
-      { photoIndex: 2, rotation: 0 },
-      null,
-      { photoIndex: 4, rotation: 0 },
-      null,
-    ];
-    const state = buildPatternState(assignments, 3);
-    // R face (index 1) should still be all R
-    expect(state.slice(9, 18).every((c) => c === "R")).toBe(true);
   });
 });
 

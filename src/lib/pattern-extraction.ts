@@ -1,5 +1,4 @@
-import type { CubeSize, CubeState, FaceColor } from "@/types/cube";
-import { FACE_ORDER } from "@/types/cube";
+import type { CubeSize } from "@/types/cube";
 
 export interface FacePhoto {
   dataUrl: string;
@@ -86,35 +85,6 @@ export function extractFaceStickers(
   return stickers;
 }
 
-/**
- * Build a standard CubeState from face assignments.
- * Maps each photo to a FaceColor based on which slot it was assigned to.
- */
-export function buildPatternState(
-  assignments: (FaceAssignment | null)[],
-  size: CubeSize
-): CubeState {
-  const stickersPerFace = size * size;
-  const state: FaceColor[] = [];
-
-  for (let faceIdx = 0; faceIdx < 6; faceIdx++) {
-    const assignment = assignments[faceIdx];
-    const faceColor = FACE_ORDER[faceIdx];
-
-    if (assignment !== null && assignment !== undefined) {
-      for (let i = 0; i < stickersPerFace; i++) {
-        state.push(faceColor);
-      }
-    } else {
-      // Unassigned face — fill with solved color as placeholder
-      for (let i = 0; i < stickersPerFace; i++) {
-        state.push(faceColor);
-      }
-    }
-  }
-
-  return state;
-}
 
 /**
  * Extract sticker thumbnails from a data URL photo.

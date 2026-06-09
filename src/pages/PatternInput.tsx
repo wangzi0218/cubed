@@ -17,7 +17,7 @@ import { useCubeStore } from "@/stores/cube-store";
 import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
 import type { FaceColor, CubeState } from "@/types/cube";
 import { useSolve } from "@/hooks/useSolve";
-import { imageDataToDataUrl } from "@/lib/image-utils";
+import { imageDataToDataUrl, classifyStickerColor } from "@/lib/image-utils";
 import { createSolvedState } from "@/lib/cube-state";
 import { ColorPalette } from "@/components/cube/CubeNet";
 import {
@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 type Phase = "intro" | "capture" | "assign" | "review";
 
 export function PatternInput() {
-  const { cubeSize, currentState, setAppStep } = useCubeStore();
+  const { cubeSize, setAppStep } = useCubeStore();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [photos, setPhotos] = useState<FacePhoto[]>([]);
@@ -62,7 +62,10 @@ export function PatternInput() {
     setExtracting(true);
 
     async function extractAll() {
+      const stickersPerFace = cubeSize * cubeSize;
       const results: (string[] | null)[] = Array(6).fill(null);
+      const colors: FaceColor[] = createSolvedState(cubeSize);
+
       for (let i = 0; i < 6; i++) {
         const assignment = assignments[i];
         if (assignment === null) continue;
@@ -70,13 +73,24 @@ export function PatternInput() {
         if (!photo) continue;
         try {
           const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize);
-          results[i] = applyRotation(raw, cubeSize, assignment.rotation);
+          const rotated = applyRotation(raw, cubeSize, assignment.rotation);
+          results[i] = rotated;
+
+          // Detect color for each sticker thumbnail
+          for (let j = 0; j < stickersPerFace; j++) {
+            try {
+              colors[i * stickersPerFace + j] = await classifyStickerColor(rotated[j]);
+            } catch {
+              // keep default color on failure
+            }
+          }
         } catch {
           results[i] = null;
         }
       }
       if (!cancelled) {
         setStickers(results);
+        setStickerColors(colors);
         setExtracting(false);
       }
     }
@@ -362,7 +376,7 @@ export function PatternInput() {
     <CubePreviewLayout
       title={`${cubeSize}×${cubeSize} 提取结果`}
       onBack={backToInputMethod}
-      state={currentState}
+      state={stickerColors}
       size={cubeSize}
       stickerImages={stickerImages}
     >
