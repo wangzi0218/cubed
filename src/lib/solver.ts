@@ -1,7 +1,8 @@
 import { Cube, initSolver as initRubikSolver, solve } from "rubik-solver";
-import type { CubeSize, CubeState, Move, SolutionStep } from "@/types/cube";
+import type { CubeSize, CubeState, Move, SolutionStep, StickerOrientations } from "@/types/cube";
 import { validate2x2, validate3x3 } from "@/lib/cube-validation";
 import { map2x2To3x3 } from "@/lib/cube-state";
+import { applyOrientationMove } from "@/lib/sticker-orientation";
 
 let solverReady = false;
 
@@ -28,17 +29,24 @@ export function applyMove(state: CubeState, move: Move): CubeState {
 
 export function applyMoves(
   initialState: CubeState,
-  moves: Move[]
+  moves: Move[],
+  initialOrientations?: StickerOrientations,
+  size: CubeSize = 3
 ): SolutionStep[] {
   const steps: SolutionStep[] = [];
   let currentState = initialState;
+  let currentOrientations = initialOrientations;
 
   for (let i = 0; i < moves.length; i++) {
     currentState = applyMove(currentState, moves[i]);
+    if (currentOrientations) {
+      currentOrientations = applyOrientationMove(currentOrientations, moves[i].notation, size);
+    }
     steps.push({
       index: i,
       move: moves[i],
       stateAfter: [...currentState],
+      orientationsAfter: currentOrientations ? [...currentOrientations] : undefined,
     });
   }
   return steps;
@@ -66,7 +74,8 @@ function solve2x2(state: CubeState): string {
 
 export function solveCube(
   state: CubeState,
-  size: CubeSize
+  size: CubeSize,
+  initialOrientations?: StickerOrientations
 ): { solution: string; steps: SolutionStep[] } {
   initSolver();
 
@@ -80,7 +89,7 @@ export function solveCube(
 
   const solutionStr = size === 2 ? solve2x2(state) : solve3x3(state);
   const moves = parseMoves(solutionStr);
-  const steps = applyMoves(state, moves);
+  const steps = applyMoves(state, moves, initialOrientations, size);
 
   return { solution: solutionStr, steps };
 }

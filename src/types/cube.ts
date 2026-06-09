@@ -32,11 +32,16 @@ export interface Move {
 // 2x2: 24 stickers, 4 per face
 export type CubeState = FaceColor[];
 
+// Sticker orientation for pattern cubes — parallel to CubeState
+// Each value is 0/1/2/3 representing 0°/90°/180°/270° CW rotation
+export type StickerOrientations = number[];
+
 // Solution step
 export interface SolutionStep {
   index: number;
   move: Move;
   stateAfter: CubeState;
+  orientationsAfter?: StickerOrientations;
 }
 
 // App flow state

@@ -1,6 +1,6 @@
 import { CubeViewer } from "@/components/cube/CubeViewer";
 import { PageHeader } from "./PageHeader";
-import type { CubeState, CubeSize } from "@/types/cube";
+import type { CubeState, CubeSize, StickerOrientations } from "@/types/cube";
 
 interface CubePreviewLayoutProps {
   title: string;
@@ -10,6 +10,7 @@ interface CubePreviewLayoutProps {
   size: CubeSize;
   previewHint?: string;
   stickerImages?: string[];
+  stickerOrientations?: StickerOrientations;
   children: React.ReactNode;
 }
 
@@ -21,6 +22,7 @@ export function CubePreviewLayout({
   size,
   previewHint = "拖拽旋转查看 3D 预览",
   stickerImages,
+  stickerOrientations,
   children,
 }: CubePreviewLayoutProps) {
   return (
@@ -32,7 +34,7 @@ export function CubePreviewLayout({
           {/* Left: 3D preview */}
           <div className="flex-1 flex flex-col items-center">
             <div className="w-full max-w-md aspect-square rounded-xl border bg-card/50 overflow-hidden">
-              <CubeViewer state={state} size={size} stickerImages={stickerImages} />
+              <CubeViewer state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} />
             </div>
             <p className="text-sm text-muted-foreground mt-2">{previewHint}</p>
           </div>

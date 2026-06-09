@@ -6,7 +6,7 @@ import { StepList } from "@/components/cube/StepList";
 import { SolutionControls } from "@/components/cube/SolutionControls";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useCubeStore } from "@/stores/cube-store";
-import type { Move } from "@/types/cube";
+import type { Move, StickerOrientations } from "@/types/cube";
 
 export function Solution() {
   const {
@@ -18,6 +18,7 @@ export function Solution() {
     flowOrigin,
     currentState: storeState,
     stickerImages,
+    stickerOrientations: storeOrientations,
     setCurrentStepIndex,
     setIsPlaying,
     setAppStep,
@@ -33,6 +34,11 @@ export function Solution() {
     currentStepIndex >= 0 && currentStepIndex < solutionSteps.length
       ? solutionSteps[currentStepIndex].stateAfter
       : storeState;
+
+  const currentOrientations: StickerOrientations | undefined =
+    currentStepIndex >= 0 && currentStepIndex < solutionSteps.length
+      ? solutionSteps[currentStepIndex].orientationsAfter
+      : storeOrientations;
 
   useEffect(() => {
     if (!animatingMove) {
@@ -88,7 +94,7 @@ export function Solution() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
         <div className="w-64 h-64">
-          <CubeViewer state={currentState} size={cubeSize} stickerImages={stickerImages} />
+          <CubeViewer state={currentState} size={cubeSize} stickerImages={stickerImages} stickerOrientations={currentOrientations} />
         </div>
         <p className="text-lg font-medium text-success">魔方已经是还原状态</p>
         <Button variant="outline" onClick={handleBack}>
@@ -119,6 +125,7 @@ export function Solution() {
                 state={currentState}
                 size={cubeSize}
                 stickerImages={stickerImages}
+                stickerOrientations={currentOrientations}
                 currentMove={animatingMove}
                 moveProgress={moveProgress}
               />

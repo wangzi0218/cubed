@@ -5,8 +5,10 @@ import type {
   CubeState,
   InputMethod,
   SolutionStep,
+  StickerOrientations,
 } from "@/types/cube";
 import { createSolvedState } from "@/lib/cube-state";
+import { createInitialOrientations } from "@/lib/sticker-orientation";
 
 export type FlowOrigin = "solve" | "scramble" | "learn";
 
@@ -35,6 +37,10 @@ interface CubeStore {
   stickerImages?: string[];
   setStickerImages: (images: string[] | undefined) => void;
 
+  // Sticker orientations for pattern cubes
+  stickerOrientations: StickerOrientations;
+  setStickerOrientations: (orientations: StickerOrientations) => void;
+
   // Solution
   solution: string | null;
   solutionSteps: SolutionStep[];
@@ -62,6 +68,7 @@ export const useCubeStore = create<CubeStore>((set, get) => ({
     set({
       cubeSize: size,
       currentState: createSolvedState(size),
+      stickerOrientations: createInitialOrientations(size),
     }),
 
   inputMethod: "manual",
@@ -72,6 +79,9 @@ export const useCubeStore = create<CubeStore>((set, get) => ({
 
   stickerImages: undefined,
   setStickerImages: (images) => set({ stickerImages: images }),
+
+  stickerOrientations: createInitialOrientations(3),
+  setStickerOrientations: (orientations) => set({ stickerOrientations: orientations }),
 
   solution: null,
   solutionSteps: [],
@@ -118,6 +128,7 @@ export const useCubeStore = create<CubeStore>((set, get) => ({
       inputMethod: "manual",
       currentState: createSolvedState(3),
       stickerImages: undefined,
+      stickerOrientations: createInitialOrientations(3),
       solution: null,
       solutionSteps: [],
       currentStepIndex: -1,

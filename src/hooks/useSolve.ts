@@ -2,10 +2,21 @@ import { useState, useCallback } from "react";
 import { useCubeStore } from "@/stores/cube-store";
 import { validateState } from "@/lib/cube-state";
 import { solveCube } from "@/lib/solver";
-import type { CubeState, CubeSize } from "@/types/cube";
+import type { CubeState, CubeSize, StickerOrientations } from "@/types/cube";
 
-export function useSolve(state: CubeState, size: CubeSize, stickerImages?: string[]) {
-  const { setCurrentState, setStickerImages, setSolution, setAppStep } = useCubeStore();
+export function useSolve(
+  state: CubeState,
+  size: CubeSize,
+  stickerImages?: string[],
+  stickerOrientations?: StickerOrientations
+) {
+  const {
+    setCurrentState,
+    setStickerImages,
+    setStickerOrientations: storeSetOrientations,
+    setSolution,
+    setAppStep,
+  } = useCubeStore();
   const [error, setError] = useState<string | null>(null);
 
   const solve = useCallback(() => {
@@ -17,7 +28,10 @@ export function useSolve(state: CubeState, size: CubeSize, stickerImages?: strin
     try {
       setCurrentState(state);
       setStickerImages(stickerImages);
-      const result = solveCube(state, size);
+      if (stickerOrientations) {
+        storeSetOrientations(stickerOrientations);
+      }
+      const result = solveCube(state, size, stickerOrientations);
       setSolution(result.solution, result.steps);
       setAppStep("solution");
     } catch (e: unknown) {
@@ -25,7 +39,7 @@ export function useSolve(state: CubeState, size: CubeSize, stickerImages?: strin
         e instanceof Error ? e.message : "求解失败，请检查魔方状态是否正确";
       setError(msg);
     }
-  }, [state, size, stickerImages, setCurrentState, setStickerImages, setSolution, setAppStep]);
+  }, [state, size, stickerImages, stickerOrientations, setCurrentState, setStickerImages, storeSetOrientations, setSolution, setAppStep]);
 
   const clearError = useCallback(() => setError(null), []);
 

@@ -16,7 +16,7 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
 import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
-import type { FaceColor, CubeState } from "@/types/cube";
+import type { FaceColor, CubeState, StickerOrientations } from "@/types/cube";
 import { useSolve } from "@/hooks/useSolve";
 import { imageDataToDataUrl, classifyStickerColor } from "@/lib/image-utils";
 import { createSolvedState } from "@/lib/cube-state";
@@ -28,6 +28,12 @@ import {
 } from "@/lib/pattern-extraction";
 import type { FacePhoto, FaceAssignment } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
+import { CenterOrientationEditor } from "@/components/cube/CenterOrientationEditor";
+import {
+  createInitialOrientations,
+  getCenterOrientations,
+  setCenterOrientation,
+} from "@/lib/sticker-orientation";
 
 type Phase = "intro" | "capture" | "assign" | "review";
 type CubeVariant = "standard" | "pattern";
@@ -51,12 +57,22 @@ export function PatternInput() {
   const [stickerColors, setStickerColors] = useState<CubeState>(
     () => createSolvedState(cubeSize)
   );
+  const [stickerOrientations, setStickerOrientations] = useState<StickerOrientations>(
+    () => createInitialOrientations(cubeSize)
+  );
+
+  const isPattern = cubeVariant === "pattern";
 
   const stickerImages = stickers.flat().every((s) => s !== null)
     ? (stickers.flat() as string[])
     : undefined;
 
-  const { error, solve, clearError } = useSolve(stickerColors, cubeSize, stickerImages);
+  const { error, solve, clearError } = useSolve(
+    stickerColors,
+    cubeSize,
+    stickerImages,
+    isPattern ? stickerOrientations : undefined
+  );
 
   useEffect(() => {
     if (phase !== "review") return;
@@ -188,6 +204,7 @@ export function PatternInput() {
     setStickers(Array(6).fill(null));
     setExtracting(false);
     setStickerColors(createSolvedState(cubeSize));
+    setStickerOrientations(createInitialOrientations(cubeSize));
     clearError();
   }, [clearError, cubeSize]);
 
@@ -197,6 +214,13 @@ export function PatternInput() {
     setExtracting(false);
     clearError();
   }, [clearError]);
+
+  const handleCenterOrientationChange = useCallback(
+    (faceIdx: number, value: number) => {
+      setStickerOrientations((prev) => setCenterOrientation(prev, faceIdx, value, cubeSize));
+    },
+    [cubeSize]
+  );
 
   const backToInputMethod = useCallback(() => setAppStep("input-method"), [setAppStep]);
 
@@ -418,7 +442,12 @@ export function PatternInput() {
   }
 
   // phase === "review"
-  const isPattern = cubeVariant === "pattern";
+  const centerStickers = stickers.map((face) => {
+    if (!face) return "";
+    const centerPos = Math.floor(face.length / 2);
+    return face[centerPos] ?? "";
+  });
+  const centerOrientations = getCenterOrientations(stickerOrientations, cubeSize);
 
   return (
     <CubePreviewLayout
@@ -427,6 +456,7 @@ export function PatternInput() {
       state={stickerColors}
       size={cubeSize}
       stickerImages={stickerImages}
+      stickerOrientations={isPattern ? stickerOrientations : undefined}
     >
       <div>
         <p className="text-sm font-medium mb-2">
@@ -443,6 +473,14 @@ export function PatternInput() {
           showFaceLabel={isPattern}
         />
       </div>
+
+      {isPattern && !extracting && stickers.some((s) => s !== null) && (
+        <CenterOrientationEditor
+          centerStickers={centerStickers}
+          orientations={centerOrientations}
+          onOrientationChange={handleCenterOrientationChange}
+        />
+      )}
 
       <div>
         {extracting ? (
