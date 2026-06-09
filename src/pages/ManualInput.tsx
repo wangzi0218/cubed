@@ -34,9 +34,9 @@ export function ManualInput() {
       const result = solveCube(currentState, cubeSize);
       setSolution(result.solution, result.steps);
       setAppStep("solution");
-    } catch (e: any) {
-      setError(e.message || "求解失败，请检查魔方状态是否正确");
-      console.error(e);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "求解失败，请检查魔方状态是否正确";
+      setError(msg);
     }
   }, [currentState, cubeSize, setSolution, setAppStep]);
 

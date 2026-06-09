@@ -198,7 +198,7 @@ export function TopologyInput() {
             返回
           </Button>
           <h2 className="text-xl font-bold tracking-tight">
-            {cubeSize}x{cubeSize} 拓扑拼合
+            {cubeSize}×{cubeSize} 拓扑拼合
           </h2>
         </div>
 

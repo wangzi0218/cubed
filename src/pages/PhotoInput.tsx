@@ -146,7 +146,7 @@ export function PhotoInput() {
             返回
           </Button>
           <h2 className="text-xl font-bold tracking-tight">
-            {cubeSize}x{cubeSize} 拍照识别结果
+            {cubeSize}×{cubeSize} 拍照识别结果
           </h2>
         </div>
 

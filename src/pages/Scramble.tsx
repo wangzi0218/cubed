@@ -30,9 +30,8 @@ export function Scramble() {
     try {
       const result = solveCube(scrambledState, cubeSize);
       setSolution(result.solution, result.steps);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Scramble solve error:", e);
-      // Still navigate to solution page — it handles empty steps gracefully
       setSolution(null, []);
     }
     setAppStep("solution");

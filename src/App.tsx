@@ -13,6 +13,7 @@ import { useCubeStore } from "@/stores/cube-store";
 
 function App() {
   const appStep = useCubeStore((s) => s.appStep);
+  const inputMethod = useCubeStore((s) => s.inputMethod);
 
   function renderStep() {
     switch (appStep) {
@@ -23,10 +24,9 @@ function App() {
       case "input-method":
         return <InputMethodSelect />;
       case "input": {
-        const method = useCubeStore.getState().inputMethod;
-        if (method === "color") return <PhotoInput />;
-        if (method === "pattern") return <PatternInput />;
-        if (method === "topology") return <TopologyInput />;
+        if (inputMethod === "color") return <PhotoInput />;
+        if (inputMethod === "pattern") return <PatternInput />;
+        if (inputMethod === "topology") return <TopologyInput />;
         return <ManualInput />;
       }
       case "scramble":
