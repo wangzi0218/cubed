@@ -44,15 +44,14 @@ export function applyRotation<T>(grid: T[], size: number, degrees: number): T[] 
 /**
  * Extract sticker thumbnails from a captured face image.
  * Divides the image into a size×size grid and returns the center region of each cell as a data URL.
+ * When cropToGuide is true, first center-crops the image to a square to match the camera guide overlay.
  */
 export function extractFaceStickers(
   imageData: ImageData,
-  size: CubeSize
+  size: CubeSize,
+  cropToGuide = false
 ): string[] {
   const { width, height } = imageData;
-  const cellW = Math.floor(width / size);
-  const cellH = Math.floor(height / size);
-  const stickers: string[] = [];
 
   // Draw full image to a source canvas
   const srcCanvas = document.createElement("canvas");
@@ -60,6 +59,23 @@ export function extractFaceStickers(
   srcCanvas.height = height;
   const srcCtx = srcCanvas.getContext("2d")!;
   srcCtx.putImageData(imageData, 0, 0);
+
+  // Crop to centered square matching the camera guide overlay
+  let drawW = width;
+  let drawH = height;
+  let offsetX = 0;
+  let offsetY = 0;
+  if (cropToGuide) {
+    const squareSize = Math.min(width, height);
+    offsetX = Math.floor((width - squareSize) / 2);
+    offsetY = Math.floor((height - squareSize) / 2);
+    drawW = squareSize;
+    drawH = squareSize;
+  }
+
+  const cellW = Math.floor(drawW / size);
+  const cellH = Math.floor(drawH / size);
+  const stickers: string[] = [];
 
   const sampleSize = 128; // output thumbnail size
   const outCanvas = document.createElement("canvas");
@@ -71,8 +87,8 @@ export function extractFaceStickers(
     for (let c = 0; c < size; c++) {
       // Sample center 60% of each cell
       const margin = 0.2;
-      const sx = Math.floor(c * cellW + cellW * margin);
-      const sy = Math.floor(r * cellH + cellH * margin);
+      const sx = offsetX + Math.floor(c * cellW + cellW * margin);
+      const sy = offsetY + Math.floor(r * cellH + cellH * margin);
       const sw = Math.floor(cellW * (1 - 2 * margin));
       const sh = Math.floor(cellH * (1 - 2 * margin));
 
@@ -92,7 +108,8 @@ export function extractFaceStickers(
  */
 export function extractFaceStickersFromDataUrl(
   dataUrl: string,
-  size: CubeSize
+  size: CubeSize,
+  cropToGuide = false
 ): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -103,7 +120,7 @@ export function extractFaceStickersFromDataUrl(
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, img.width, img.height);
-      resolve(extractFaceStickers(imageData, size));
+      resolve(extractFaceStickers(imageData, size, cropToGuide));
     };
     img.onerror = () => reject(new Error("Failed to load image"));
     img.src = dataUrl;

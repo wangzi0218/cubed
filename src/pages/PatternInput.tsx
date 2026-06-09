@@ -75,7 +75,7 @@ export function PatternInput() {
         const photo = photos[assignment.photoIndex];
         if (!photo) continue;
         try {
-          const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize);
+          const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true);
           const rotated = applyRotation(raw, cubeSize, assignment.rotation);
           results[i] = rotated;
 
@@ -458,6 +458,7 @@ export function PatternInput() {
               size={cubeSize}
               onStickerClick={handleStickerClick}
               showColorIndicator={!isPattern}
+              showFaceLetter={isPattern}
             />
           </div>
         )}
@@ -484,12 +485,14 @@ function PatternStickerGrid({
   size,
   onStickerClick,
   showColorIndicator = true,
+  showFaceLetter = false,
 }: {
   stickers: (string[] | null)[];
   stickerColors: CubeState;
   size: number;
   onStickerClick: (faceIdx: number, pos: number) => void;
   showColorIndicator?: boolean;
+  showFaceLetter?: boolean;
 }) {
   const cellStyle = size === 2
     ? { width: "min(12vw, 3rem)", height: "min(12vw, 3rem)" }
@@ -534,6 +537,17 @@ function PatternStickerGrid({
                     className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white/80"
                     style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
                   />
+                )}
+                {showFaceLetter && (
+                  <span
+                    className="absolute top-0 right-0 text-[8px] font-bold leading-none px-0.5 rounded-sm"
+                    style={{
+                      backgroundColor: FACE_COLORS[color]?.hex ?? "#888",
+                      color: color === "U" ? "#000" : "#fff",
+                    }}
+                  >
+                    {color}
+                  </span>
                 )}
               </button>
             );
