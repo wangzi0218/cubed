@@ -8,7 +8,7 @@ import { applyMoves, initSolver, parseMoves, solveCube } from "@/lib/solver";
 import { createSolvedState } from "@/lib/cube-state";
 
 export function Scramble() {
-  const { cubeSize, setAppStep, setSolution, setCurrentState } = useCubeStore();
+  const { cubeSize, setAppStep, setSolution, setCurrentState, setStickerImages } = useCubeStore();
   const [scramble, setScramble] = useState(() => {
     initSolver();
     return generateScramble(cubeSize);
@@ -25,6 +25,7 @@ export function Scramble() {
     const scrambledState = steps.length > 0 ? steps[steps.length - 1].stateAfter : solvedState;
 
     setCurrentState(scrambledState);
+    setStickerImages(undefined);
     try {
       const result = solveCube(scrambledState, cubeSize);
       setSolution(result.solution, result.steps);
@@ -33,7 +34,7 @@ export function Scramble() {
       setSolution("", []);
     }
     setAppStep("solution");
-  }, [cubeSize, scramble, setAppStep, setSolution, setCurrentState]);
+  }, [cubeSize, scramble, setAppStep, setSolution, setCurrentState, setStickerImages]);
 
   const handleBack = useCallback(() => {
     setAppStep("cube-type");

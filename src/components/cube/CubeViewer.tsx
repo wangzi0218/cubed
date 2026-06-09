@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -63,43 +63,41 @@ function getCubieStickerIndex(
 }
 
 function useStickerTexture(imageUrl: string | null): THREE.CanvasTexture | null {
-  const textureRef = useRef<THREE.CanvasTexture | null>(null);
+  const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
 
   useEffect(() => {
     if (!imageUrl) {
-      if (textureRef.current) {
-        textureRef.current.dispose();
-        textureRef.current = null;
-      }
+      setTexture(null);
       return;
     }
 
+    let cancelled = false;
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      if (cancelled) return;
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
-
-      if (textureRef.current) {
-        textureRef.current.dispose();
-      }
-      textureRef.current = new THREE.CanvasTexture(canvas);
-      textureRef.current.needsUpdate = true;
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      setTexture(tex);
     };
     img.src = imageUrl;
 
     return () => {
-      if (textureRef.current) {
-        textureRef.current.dispose();
-        textureRef.current = null;
-      }
+      cancelled = true;
     };
   }, [imageUrl]);
 
-  return textureRef.current;
+  // Dispose texture on unmount
+  useEffect(() => {
+    return () => { texture?.dispose(); };
+  }, [texture]);
+
+  return texture;
 }
 
 function getCubieFaceColor(

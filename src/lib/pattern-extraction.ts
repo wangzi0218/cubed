@@ -61,7 +61,7 @@ export function extractFaceStickers(
   const srcCtx = srcCanvas.getContext("2d")!;
   srcCtx.putImageData(imageData, 0, 0);
 
-  const sampleSize = 48; // output thumbnail size
+  const sampleSize = 128; // output thumbnail size
   const outCanvas = document.createElement("canvas");
   outCanvas.width = sampleSize;
   outCanvas.height = sampleSize;

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, RotateCcw, Check } from "lucide-react";
 import { CubeNet, ColorPalette } from "@/components/cube/CubeNet";
@@ -39,8 +39,26 @@ export function PhotoInput() {
   const [detectedState, setDetectedState] = useState<CubeState>(
     createSolvedState(cubeSize)
   );
+  const [stickerImages, setStickerImages] = useState<string[] | undefined>();
 
-  const { error, solve } = useSolve(detectedState, cubeSize);
+  const { error, solve } = useSolve(detectedState, cubeSize, stickerImages);
+
+  // Extract sticker thumbnails from captured photos for 3D preview
+  useEffect(() => {
+    if (phase !== "review") return;
+    const allCaptured = capturedPhotos.every((p) => p !== null);
+    if (!allCaptured) return;
+
+    let cancelled = false;
+    (async () => {
+      const result = await extractStickerImages(
+        capturedPhotos as string[],
+        cubeSize
+      );
+      if (!cancelled) setStickerImages(result);
+    })();
+    return () => { cancelled = true; };
+  }, [phase, capturedPhotos, cubeSize]);
 
   const handleCapture = useCallback(
     (imageData: ImageData) => {
@@ -76,6 +94,7 @@ export function PhotoInput() {
     setCurrentFaceIdx(0);
     setCapturedPhotos(Array(6).fill(null));
     setDetectedState(createSolvedState(cubeSize));
+    setStickerImages(undefined);
   }, [cubeSize]);
 
   const handleRetakePhoto = useCallback((idx: number) => {
@@ -149,6 +168,7 @@ export function PhotoInput() {
       onBack={() => setAppStep("input-method")}
       state={detectedState}
       size={cubeSize}
+      stickerImages={stickerImages}
     >
       {/* Captured photos summary */}
       <div>
@@ -242,4 +262,54 @@ export function PhotoInput() {
       />
     </CubePreviewLayout>
   );
+}
+
+function extractStickerImages(
+  photos: string[],
+  size: number
+): Promise<string[]> {
+  const perFace = size * size;
+  const result: string[] = new Array(6 * perFace);
+  const MARGIN = 0.1;
+
+  return new Promise((resolve) => {
+    let loaded = 0;
+    const total = photos.length;
+
+    photos.forEach((dataUrl, faceIdx) => {
+      const img = new Image();
+      img.onload = () => {
+        const faceSize = Math.min(img.width, img.height);
+        const cellSize = faceSize / size;
+        const offsetX = (img.width - faceSize) / 2;
+        const offsetY = (img.height - faceSize) / 2;
+
+        for (let row = 0; row < size; row++) {
+          for (let col = 0; col < size; col++) {
+            const canvas = document.createElement("canvas");
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext("2d")!;
+
+            const margin = cellSize * MARGIN;
+            const sx = offsetX + col * cellSize + margin;
+            const sy = offsetY + row * cellSize + margin;
+            const sw = cellSize - margin * 2;
+            const sh = cellSize - margin * 2;
+
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 128, 128);
+            result[faceIdx * perFace + row * size + col] = canvas.toDataURL("image/png");
+          }
+        }
+
+        loaded++;
+        if (loaded === total) resolve(result);
+      };
+      img.onerror = () => {
+        loaded++;
+        if (loaded === total) resolve(result);
+      };
+      img.src = dataUrl;
+    });
+  });
 }

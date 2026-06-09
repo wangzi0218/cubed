@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Check, Zap } from "lucide-react";
-import { CubeNet } from "@/components/cube/CubeNet";
+import { CubeNet, ColorPalette } from "@/components/cube/CubeNet";
 import { CubeViewer } from "@/components/cube/CubeViewer";
 import { TopologyGuide } from "@/components/cube/TopologyGuide";
 import { TopologyCapture } from "@/components/cube/TopologyCapture";
@@ -43,6 +43,7 @@ export function TopologyInput() {
   const [cornerPhotos, setCornerPhotos] = useState<CornerPhoto[]>([]);
   const [captured, setCaptured] = useState(false);
   const [capturedColors, setCapturedColors] = useState<FaceColor[]>([]);
+  const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
 
   const is2x2 = cubeSize === 2;
   const showEdges = !is2x2;
@@ -274,13 +275,24 @@ export function TopologyInput() {
             {/* Right: net + actions */}
             <div className="flex-1 flex flex-col gap-6">
               <div>
+                <p className="text-sm font-medium mb-2">修正颜色</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  先选颜色，再点击格子修正
+                </p>
+                <ColorPalette
+                  selectedColor={selectedColor}
+                  onSelect={setSelectedColor}
+                />
+              </div>
+
+              <div>
                 <p className="text-sm font-medium mb-3">推断结果</p>
                 <div className="overflow-x-auto">
                   <CubeNet
                     state={currentState}
                     size={cubeSize}
                     onStateChange={setCurrentState}
-                    selectedColor={"U" as FaceColor}
+                    selectedColor={selectedColor}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
