@@ -5,6 +5,7 @@ import { InputMethodSelect } from "@/pages/InputMethodSelect";
 import { ManualInput } from "@/pages/ManualInput";
 import { PhotoInput } from "@/pages/PhotoInput";
 import { TopologyInput } from "@/pages/TopologyInput";
+import { PatternInput } from "@/pages/PatternInput";
 import { Scramble } from "@/pages/Scramble";
 import { Solution } from "@/pages/Solution";
 import { Learn } from "@/pages/Learn";
@@ -24,6 +25,7 @@ function App() {
       case "input": {
         const method = useCubeStore.getState().inputMethod;
         if (method === "color") return <PhotoInput />;
+        if (method === "pattern") return <PatternInput />;
         if (method === "topology") return <TopologyInput />;
         return <ManualInput />;
       }

@@ -5,7 +5,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Palette, Grid3x3, Camera } from "lucide-react";
+import { ArrowLeft, Palette, Grid3x3, Camera, Image } from "lucide-react";
 import { useCubeStore } from "@/stores/cube-store";
 import type { InputMethod } from "@/types/cube";
 
@@ -22,6 +22,13 @@ const methods = [
     icon: Camera,
     title: "拍照识别",
     description: "拍摄 6 个面，自动识别颜色",
+    available: true,
+  },
+  {
+    id: "pattern" as InputMethod,
+    icon: Image,
+    title: "图案识别",
+    description: "拍摄 6 面，拖拽分配到面位置，适用于图片/纹理魔方",
     available: true,
   },
   {
