@@ -4,6 +4,7 @@ import {
   validateState,
   stateToString,
   stringToState,
+  getStickerIndex,
   getSticker,
   setSticker,
   map2x2To3x3,
@@ -77,6 +78,30 @@ describe("stateToString / stringToState", () => {
     const state = createSolvedState(2);
     const str = stateToString(state);
     expect(str).toBe("UUUURRRRFFFFDDDDLLLLBBBB");
+  });
+});
+
+describe("getStickerIndex", () => {
+  it("returns 0 for U face pos 0 (3x3)", () => {
+    expect(getStickerIndex("U", 0, 3)).toBe(0);
+  });
+
+  it("returns 9 for R face pos 0 (3x3)", () => {
+    expect(getStickerIndex("R", 0, 3)).toBe(9);
+  });
+
+  it("returns 45 for B face pos 0 (3x3)", () => {
+    expect(getStickerIndex("B", 0, 3)).toBe(45);
+  });
+
+  it("returns correct index for middle position", () => {
+    // F face (index 2), pos 4 → 2*9 + 4 = 22
+    expect(getStickerIndex("F", 4, 3)).toBe(22);
+  });
+
+  it("works for 2x2 size", () => {
+    // R face (index 1), pos 3 → 1*4 + 3 = 7
+    expect(getStickerIndex("R", 3, 2)).toBe(7);
   });
 });
 

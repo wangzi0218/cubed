@@ -10,6 +10,7 @@ import { useCubeStore } from "@/stores/cube-store";
 import { useSolve } from "@/hooks/useSolve";
 import { createSolvedState } from "@/lib/cube-state";
 import { detectFaceColors } from "@/lib/color-detection";
+import { imageDataToDataUrl } from "@/lib/image-utils";
 import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
 import type { FaceColor, CubeState } from "@/types/cube";
 
@@ -23,15 +24,6 @@ const FACE_LABELS: Record<FaceColor, string> = {
   L: "左面 (橙)",
   B: "后面 (绿)",
 };
-
-function imageDataToDataUrl(imageData: ImageData): string {
-  const canvas = document.createElement("canvas");
-  canvas.width = imageData.width;
-  canvas.height = imageData.height;
-  const ctx = canvas.getContext("2d")!;
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL("image/jpeg", 0.7);
-}
 
 export function PhotoInput() {
   const { cubeSize, setAppStep } = useCubeStore();

@@ -14,27 +14,21 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
-import { FACE_ORDER } from "@/types/cube";
+import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
+import type { FaceColor, CubeState } from "@/types/cube";
 import { useSolve } from "@/hooks/useSolve";
+import { imageDataToDataUrl } from "@/lib/image-utils";
+import { createSolvedState } from "@/lib/cube-state";
+import { ColorPalette } from "@/components/cube/CubeNet";
 import {
   extractFaceStickersFromDataUrl,
   applyRotation,
-  buildPatternState,
   allFacesAssigned,
 } from "@/lib/pattern-extraction";
 import type { FacePhoto, FaceAssignment } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
 
 type Phase = "intro" | "capture" | "assign" | "review";
-
-function imageDataToDataUrl(imageData: ImageData): string {
-  const canvas = document.createElement("canvas");
-  canvas.width = imageData.width;
-  canvas.height = imageData.height;
-  const ctx = canvas.getContext("2d")!;
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
 
 export function PatternInput() {
   const { cubeSize, currentState, setAppStep } = useCubeStore();
@@ -48,11 +42,14 @@ export function PatternInput() {
   const [stickers, setStickers] = useState<(string[] | null)[]>(
     () => Array(6).fill(null)
   );
+  const [extracting, setExtracting] = useState(false);
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number | null>(null);
-  const [selectedCell, setSelectedCell] = useState<{ face: number; pos: number } | null>(null);
+  const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
+  const [stickerColors, setStickerColors] = useState<CubeState>(
+    () => createSolvedState(cubeSize)
+  );
 
-  const patternState = buildPatternState(assignments, cubeSize);
-  const { error, solve, clearError } = useSolve(patternState, cubeSize);
+  const { error, solve, clearError } = useSolve(stickerColors, cubeSize);
 
   const stickerImages = stickers.flat().every((s) => s !== null)
     ? (stickers.flat() as string[])
@@ -60,6 +57,9 @@ export function PatternInput() {
 
   useEffect(() => {
     if (phase !== "review") return;
+
+    let cancelled = false;
+    setExtracting(true);
 
     async function extractAll() {
       const results: (string[] | null)[] = Array(6).fill(null);
@@ -75,9 +75,13 @@ export function PatternInput() {
           results[i] = null;
         }
       }
-      setStickers(results);
+      if (!cancelled) {
+        setStickers(results);
+        setExtracting(false);
+      }
     }
     extractAll();
+    return () => { cancelled = true; };
   }, [phase, assignments, photos, cubeSize]);
 
   // ── Capture handlers ────────────────────────────────────────────────────
@@ -139,29 +143,19 @@ export function PatternInput() {
     });
   }, []);
 
-  // ── Sticker swap ───────────────────────────────────────────────────────
+  // ── Sticker click: set color ──────────────────────────────────────────
 
   const handleStickerClick = useCallback(
     (faceIdx: number, pos: number) => {
-      if (!selectedCell) {
-        setSelectedCell({ face: faceIdx, pos });
-      } else if (selectedCell.face === faceIdx && selectedCell.pos === pos) {
-        setSelectedCell(null);
-      } else {
-        setStickers((prev) => {
-          const next = prev.map((f) => (f ? [...f] : null));
-          const srcFace = next[selectedCell.face];
-          const dstFace = next[faceIdx];
-          if (!srcFace || !dstFace) return prev;
-          const tmp = srcFace[selectedCell.pos];
-          srcFace[selectedCell.pos] = dstFace[pos];
-          dstFace[pos] = tmp;
-          return next;
-        });
-        setSelectedCell(null);
-      }
+      const stickersPerFace = cubeSize * cubeSize;
+      const idx = faceIdx * stickersPerFace + pos;
+      setStickerColors((prev) => {
+        const next = [...prev];
+        next[idx] = selectedColor;
+        return next;
+      });
     },
-    [selectedCell]
+    [cubeSize, selectedColor]
   );
 
   // ── Navigation ──────────────────────────────────────────────────────────
@@ -172,12 +166,15 @@ export function PatternInput() {
     setCaptureIdx(0);
     setAssignments(Array(6).fill(null));
     setStickers(Array(6).fill(null));
+    setExtracting(false);
+    setStickerColors(createSolvedState(cubeSize));
     clearError();
-  }, [clearError]);
+  }, [clearError, cubeSize]);
 
   const handleBackToAssign = useCallback(() => {
     setPhase("assign");
     setStickers(Array(6).fill(null));
+    setExtracting(false);
     clearError();
   }, [clearError]);
 
@@ -264,7 +261,7 @@ export function PatternInput() {
       <div className="flex-1 flex flex-col">
         <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
           <PageHeader
-            title={`${cubeSize}×${cubeSize} 图案识别`}
+            title={`${cubeSize}×${cubeSize} 分配面位`}
             onBack={backToInputMethod}
           />
 
@@ -363,24 +360,39 @@ export function PatternInput() {
   // phase === "review"
   return (
     <CubePreviewLayout
-      title={`${cubeSize}×${cubeSize} 图案识别`}
+      title={`${cubeSize}×${cubeSize} 提取结果`}
       onBack={backToInputMethod}
       state={currentState}
       size={cubeSize}
       stickerImages={stickerImages}
     >
       <div>
-        <p className="text-sm font-medium mb-3">提取结果</p>
-        <PatternStickerGrid
-          stickers={stickers}
-          assignments={assignments}
-          size={cubeSize}
-          selectedCell={selectedCell}
-          onStickerClick={handleStickerClick}
-        />
-        <p className="text-xs text-muted-foreground mt-2">
-          点击两个格子可交换贴纸位置
+        <p className="text-sm font-medium mb-2">修正颜色</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          先选颜色，再点击格子修正。参考左侧图片贴纸确认颜色。
         </p>
+        <ColorPalette
+          selectedColor={selectedColor}
+          onSelect={setSelectedColor}
+        />
+      </div>
+
+      <div>
+        {extracting ? (
+          <div className="flex flex-col items-center gap-3 py-8">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <PatternStickerGrid
+              stickers={stickers}
+              stickerColors={stickerColors}
+              size={cubeSize}
+              onStickerClick={handleStickerClick}
+            />
+          </div>
+        )}
       </div>
 
       {error && <ErrorMessage message={error} />}
@@ -388,7 +400,7 @@ export function PatternInput() {
       <ActionBar
         actions={[
           { label: "修改分配", icon: RotateCcw, onClick: handleBackToAssign, variant: "outline" },
-          { label: "开始求解", icon: Zap, onClick: solve, flex: true },
+          { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting },
         ]}
       />
     </CubePreviewLayout>
@@ -396,48 +408,26 @@ export function PatternInput() {
 }
 
 /**
- * Display the sticker thumbnails in a cube net layout.
+ * Display the sticker thumbnails with color indicators in a cube net layout.
  */
 function PatternStickerGrid({
   stickers,
-  assignments,
+  stickerColors,
   size,
-  selectedCell,
   onStickerClick,
 }: {
   stickers: (string[] | null)[];
-  assignments: (FaceAssignment | null)[];
+  stickerColors: CubeState;
   size: number;
-  selectedCell: { face: number; pos: number } | null;
   onStickerClick: (faceIdx: number, pos: number) => void;
 }) {
   const cellStyle = size === 2
     ? { width: "min(12vw, 3rem)", height: "min(12vw, 3rem)" }
     : { width: "min(10vw, 2.5rem)", height: "min(10vw, 2.5rem)" };
+  const stickersPerFace = size * size;
 
   function renderFace(faceIdx: number, label: string) {
     const faceStickers = stickers[faceIdx];
-    const assignment = assignments[faceIdx];
-
-    if (!faceStickers || !assignment) {
-      return (
-        <div className="flex flex-col items-center">
-          <div
-            className="grid gap-0.5"
-            style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
-          >
-            {Array.from({ length: size * size }).map((_, i) => (
-              <div
-                key={i}
-                className="border border-border/30 rounded-sm bg-muted/30"
-                style={cellStyle}
-              />
-            ))}
-          </div>
-          <span className="text-xs text-muted-foreground mt-1 font-medium">{label}</span>
-        </div>
-      );
-    }
 
     return (
       <div className="flex flex-col items-center">
@@ -445,25 +435,33 @@ function PatternStickerGrid({
           className="grid gap-0.5"
           style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
         >
-          {faceStickers.map((stickerUrl, i) => {
-            const isSelected = selectedCell?.face === faceIdx && selectedCell?.pos === i;
+          {Array.from({ length: stickersPerFace }).map((_, i) => {
+            const colorIdx = faceIdx * stickersPerFace + i;
+            const color = stickerColors[colorIdx];
+            const stickerUrl = faceStickers?.[i];
             return (
               <button
                 key={i}
-                className={cn(
-                  "border rounded-sm overflow-hidden cursor-pointer transition-all",
-                  isSelected
-                    ? "border-primary ring-2 ring-primary/50 scale-110 z-10"
-                    : "border-border/30 hover:border-primary/50 hover:scale-105"
-                )}
+                className="border border-border/30 rounded-sm overflow-hidden cursor-pointer transition-all hover:border-primary/50 hover:scale-105 relative"
                 style={cellStyle}
                 onClick={() => onStickerClick(faceIdx, i)}
               >
-                <img
-                  src={stickerUrl}
-                  alt={`Sticker ${i}`}
-                  className="w-full h-full object-cover"
-                  draggable={false}
+                {stickerUrl ? (
+                  <img
+                    src={stickerUrl}
+                    alt={`Sticker ${i}`}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full"
+                    style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
+                  />
+                )}
+                <span
+                  className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white/80"
+                  style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
                 />
               </button>
             );
@@ -477,16 +475,16 @@ function PatternStickerGrid({
   return (
     <div className="flex flex-col items-center gap-1 overflow-x-auto">
       <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
-        {renderFace(0, "Up")}
+        {renderFace(0, "上")}
       </div>
       <div className="flex gap-px sm:gap-1">
-        {renderFace(4, "Left")}
-        {renderFace(2, "Front")}
-        {renderFace(1, "Right")}
-        {renderFace(5, "Back")}
+        {renderFace(4, "左")}
+        {renderFace(2, "前")}
+        {renderFace(1, "右")}
+        {renderFace(5, "后")}
       </div>
       <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
-        {renderFace(3, "Down")}
+        {renderFace(3, "下")}
       </div>
     </div>
   );

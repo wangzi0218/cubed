@@ -29,7 +29,7 @@ export function Solution() {
   const animFrameRef = useRef<number>(0);
 
   const currentState =
-    currentStepIndex >= 0
+    currentStepIndex >= 0 && currentStepIndex < solutionSteps.length
       ? solutionSteps[currentStepIndex].stateAfter
       : storeState;
 
@@ -135,7 +135,7 @@ export function Solution() {
               />
             </div>
 
-            {currentStepIndex >= 0 && (
+            {currentStepIndex >= 0 && currentStepIndex < solutionSteps.length && (
               <div className="mt-3 text-center">
                 <span className="text-2xl font-mono font-bold tracking-widest">
                   {solutionSteps[currentStepIndex].move.notation}
