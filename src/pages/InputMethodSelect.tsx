@@ -68,11 +68,10 @@ export function InputMethodSelect() {
           {methods.map((m) => (
             <Card
               key={m.id}
-              className={`transition-all ${
-                m.available
-                  ? "cursor-pointer hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5"
-                  : "opacity-50 cursor-not-allowed"
-              }`}
+              className={
+                m.available ? undefined : "opacity-50 cursor-not-allowed"
+              }
+              clickable={m.available}
               onClick={() => {
                 if (m.available) {
                   setInputMethod(m.id);

@@ -45,11 +45,10 @@ export function Home() {
         {options.map((opt) => (
           <Card
             key={opt.id}
-            className={`transition-all ${
-              opt.available
-                ? "cursor-pointer hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5"
-                : "opacity-50 cursor-not-allowed"
-            }`}
+            className={
+              opt.available ? undefined : "opacity-50 cursor-not-allowed"
+            }
+            clickable={opt.available}
             onClick={() => {
               if (!opt.available) return;
               if (opt.id === "solve") {

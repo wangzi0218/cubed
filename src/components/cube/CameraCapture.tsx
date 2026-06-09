@@ -132,13 +132,6 @@ export function CameraCapture({
 
         <div className="w-10" /> {/* Spacer for symmetry */}
       </div>
-
-      <style>{`
-        @keyframes flash {
-          0% { opacity: 0.8; }
-          100% { opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }

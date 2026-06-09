@@ -125,7 +125,6 @@ function placeEdge(
     // photo.colors[0] sits on face1 side, photo.colors[1] on face2 side.
     // We need to check which canonical colour belongs to face1.
     const canonicalFace1Color = canonical[0]; // first entry in V_EDGE_COLORS is the "face1" colour
-    const canonicalFace2Color = canonical[1];
 
     if (photo.face1 === EDGE_POSITION_FACES[posIdx][0]) {
       // photo.face1 matches position face1 — direct mapping

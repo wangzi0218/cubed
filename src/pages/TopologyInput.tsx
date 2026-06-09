@@ -1,13 +1,15 @@
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RotateCcw, Check, Zap } from "lucide-react";
+import { RotateCcw, Check, Zap } from "lucide-react";
 import { CubeNet } from "@/components/cube/CubeNet";
 import { CubeViewer } from "@/components/cube/CubeViewer";
 import { TopologyGuide } from "@/components/cube/TopologyGuide";
 import { TopologyCapture } from "@/components/cube/TopologyCapture";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
-import { validateState } from "@/lib/cube-state";
-import { solveCube } from "@/lib/solver";
+import { useSolve } from "@/hooks/useSolve";
 import {
   inferCubeState,
   EDGE_POSITION_FACES,
@@ -31,7 +33,6 @@ export function TopologyInput() {
     cubeSize,
     currentState,
     setCurrentState,
-    setSolution,
     setAppStep,
   } = useCubeStore();
 
@@ -42,16 +43,13 @@ export function TopologyInput() {
   const [cornerPhotos, setCornerPhotos] = useState<CornerPhoto[]>([]);
   const [captured, setCaptured] = useState(false);
   const [capturedColors, setCapturedColors] = useState<FaceColor[]>([]);
-  const [error, setError] = useState<string | null>(null);
 
   const is2x2 = cubeSize === 2;
   const showEdges = !is2x2;
 
-  // Current position info
   const currentEdge = showEdges ? EDGE_POSITIONS[edgeIdx] : null;
   const currentCorner = CORNER_POSITIONS[cornerIdx];
 
-  // Completed step indices
   const completedEdges = useMemo(
     () => edgePhotos.map((_, i) => i),
     [edgePhotos]
@@ -60,6 +58,8 @@ export function TopologyInput() {
     () => cornerPhotos.map((_, i) => i),
     [cornerPhotos]
   );
+
+  const { error, solve, clearError } = useSolve(currentState, cubeSize);
 
   // ── Phase transitions ────────────────────────────────────────────────────
 
@@ -71,8 +71,8 @@ export function TopologyInput() {
     setCornerPhotos([]);
     setCaptured(false);
     setCapturedColors([]);
-    setError(null);
-  }, [showEdges]);
+    clearError();
+  }, [showEdges, clearError]);
 
   // ── Edge capture handlers ────────────────────────────────────────────────
 
@@ -138,7 +138,6 @@ export function TopologyInput() {
     setCapturedColors([]);
 
     if (cornerIdx + 1 >= CORNER_POSITIONS.length) {
-      // All corners done — infer state and move to review
       const topology: CubeTopology = {
         edges: edgePhotos,
         corners: next,
@@ -151,25 +150,7 @@ export function TopologyInput() {
     }
   }, [capturedColors, currentCorner, cornerPhotos, cornerIdx, edgePhotos, cubeSize, setCurrentState]);
 
-  // ── Solve ────────────────────────────────────────────────────────────────
-
-  const handleSolve = useCallback(() => {
-    if (!validateState(currentState, cubeSize)) {
-      setError(
-        "每个颜色应该恰好出现 " + cubeSize * cubeSize + " 次，请检查输入"
-      );
-      return;
-    }
-    setError(null);
-    try {
-      const result = solveCube(currentState, cubeSize);
-      setSolution(result.solution, result.steps);
-      setAppStep("solution");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "求解失败，请检查魔方状态是否正确";
-      setError(msg);
-    }
-  }, [currentState, cubeSize, setSolution, setAppStep]);
+  // ── Restart ──────────────────────────────────────────────────────────────
 
   const handleRestart = useCallback(() => {
     setPhase("intro");
@@ -179,28 +160,21 @@ export function TopologyInput() {
     setCornerPhotos([]);
     setCaptured(false);
     setCapturedColors([]);
-    setError(null);
-  }, []);
+    clearError();
+  }, [clearError]);
 
   // ── Render ───────────────────────────────────────────────────────────────
+
+  const backToInputMethod = useCallback(() => setAppStep("input-method"), [setAppStep]);
 
   return (
     <div className="flex-1 flex flex-col">
       <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            className="gap-2"
-            onClick={() => setAppStep("input-method")}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            返回
-          </Button>
-          <h2 className="text-xl font-bold tracking-tight">
-            {cubeSize}×{cubeSize} 拓扑拼合
-          </h2>
-        </div>
+        <PageHeader
+          title={`${cubeSize}×${cubeSize} 拓扑拼合`}
+          onBack={backToInputMethod}
+        />
 
         {/* ── Phase: intro ──────────────────────────────────────────────── */}
         {phase === "intro" && (
@@ -233,7 +207,6 @@ export function TopologyInput() {
         {/* ── Phase: edges ──────────────────────────────────────────────── */}
         {phase === "edges" && currentEdge && (
           <div className="flex-1 flex flex-col lg:flex-row gap-8">
-            {/* Left: guide */}
             <div className="flex-1 flex flex-col items-center justify-center gap-6">
               <TopologyGuide
                 type="edge"
@@ -244,7 +217,6 @@ export function TopologyInput() {
               />
             </div>
 
-            {/* Right: capture */}
             <div className="flex-1 flex flex-col items-center justify-center">
               <TopologyCapture
                 type="edge"
@@ -262,7 +234,6 @@ export function TopologyInput() {
         {/* ── Phase: corners ────────────────────────────────────────────── */}
         {phase === "corners" && currentCorner && (
           <div className="flex-1 flex flex-col lg:flex-row gap-8">
-            {/* Left: guide */}
             <div className="flex-1 flex flex-col items-center justify-center gap-6">
               <TopologyGuide
                 type="corner"
@@ -273,7 +244,6 @@ export function TopologyInput() {
               />
             </div>
 
-            {/* Right: capture */}
             <div className="flex-1 flex flex-col items-center justify-center">
               <TopologyCapture
                 type="corner"
@@ -318,26 +288,14 @@ export function TopologyInput() {
                 </p>
               </div>
 
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
-                  {error}
-                </p>
-              )}
+              {error && <ErrorMessage message={error} />}
 
-              <div className="flex gap-3 mt-auto">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleRestart}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  重新拍摄
-                </Button>
-                <Button className="flex-1 gap-2" onClick={handleSolve}>
-                  <Check className="w-4 h-4" />
-                  开始求解
-                </Button>
-              </div>
+              <ActionBar
+                actions={[
+                  { label: "重新拍摄", icon: RotateCcw, onClick: handleRestart, variant: "outline" },
+                  { label: "开始求解", icon: Check, onClick: solve, flex: true },
+                ]}
+              />
             </div>
           </div>
         )}

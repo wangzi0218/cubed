@@ -45,7 +45,7 @@ export function rgbToHsv(
 }
 
 /** Classify a single pixel (HSV) to the nearest Rubik's cube face color. */
-function classifyPixel(h: number, s: number, v: number): FaceColor {
+export function classifyPixel(h: number, s: number, v: number): FaceColor {
   // White: very low saturation, high brightness
   if (s < 0.15 && v > 0.85) return "U";
 

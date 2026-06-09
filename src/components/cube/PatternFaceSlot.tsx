@@ -1,4 +1,3 @@
-import { useState, useCallback } from "react";
 import { RotateCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FaceColor } from "@/types/cube";
@@ -8,7 +7,8 @@ interface PatternFaceSlotProps {
   face: FaceColor;
   photoUrl: string | null;
   rotation: number;
-  onDrop: (photoIdx: number) => void;
+  selected: boolean;
+  onSlotTap: () => void;
   onRotate: () => void;
   onRemove: () => void;
 }
@@ -17,47 +17,22 @@ export function PatternFaceSlot({
   face,
   photoUrl,
   rotation,
-  onDrop,
+  selected,
+  onSlotTap,
   onRotate,
   onRemove,
 }: PatternFaceSlotProps) {
-  const [dragOver, setDragOver] = useState(false);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    setDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragOver(false);
-      const idx = parseInt(e.dataTransfer.getData("text/plain"), 10);
-      if (!isNaN(idx)) {
-        onDrop(idx);
-      }
-    },
-    [onDrop]
-  );
-
   return (
     <div className="flex flex-col items-center gap-1">
       <div
         className={cn(
-          "relative w-20 h-20 rounded-lg border-2 transition-all overflow-hidden",
+          "relative w-20 h-20 rounded-lg border-2 transition-all overflow-hidden cursor-pointer",
           photoUrl
             ? "border-border"
             : "border-dashed border-muted-foreground/40",
-          dragOver && "border-primary bg-primary/10 scale-105"
+          selected && !photoUrl && "border-primary bg-primary/10 scale-105"
         )}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onClick={onSlotTap}
       >
         {photoUrl ? (
           <>
@@ -68,10 +43,9 @@ export function PatternFaceSlot({
               style={{ transform: `rotate(${rotation}deg)` }}
               draggable={false}
             />
-            {/* Controls overlay */}
             <div className="absolute top-0.5 right-0.5 flex gap-0.5">
               <button
-                className="w-5 h-5 rounded bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                className="min-w-[44px] min-h-[44px] p-2 rounded bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRotate();
@@ -81,7 +55,7 @@ export function PatternFaceSlot({
                 <RotateCw className="w-3 h-3" />
               </button>
               <button
-                className="w-5 h-5 rounded bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                className="min-w-[44px] min-h-[44px] p-2 rounded bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove();
@@ -94,7 +68,7 @@ export function PatternFaceSlot({
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center p-1">
-            拖入照片
+            {selected ? "点击分配" : "点击选择照片"}
           </div>
         )}
       </div>
@@ -106,33 +80,28 @@ export function PatternFaceSlot({
 }
 
 /**
- * Draggable photo thumbnail for the photo list.
+ * Tappable photo thumbnail for the photo list.
  */
 interface PhotoThumbProps {
   index: number;
   dataUrl: string;
   assigned: boolean;
+  selected: boolean;
+  onSelect: () => void;
 }
 
-export function PhotoThumb({ index, dataUrl, assigned }: PhotoThumbProps) {
-  const handleDragStart = useCallback(
-    (e: React.DragEvent) => {
-      e.dataTransfer.setData("text/plain", String(index));
-      e.dataTransfer.effectAllowed = "move";
-    },
-    [index]
-  );
-
+export function PhotoThumb({ index, dataUrl, assigned, selected, onSelect }: PhotoThumbProps) {
   return (
     <div
       className={cn(
-        "relative w-16 h-16 rounded-lg border-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing",
+        "relative w-16 h-16 min-w-[44px] min-h-[44px] rounded-lg border-2 overflow-hidden transition-all cursor-pointer",
         assigned
           ? "border-green-400/60 opacity-50"
+          : selected
+          ? "border-primary ring-2 ring-primary"
           : "border-border hover:border-primary/50 hover:shadow-md"
       )}
-      draggable={!assigned}
-      onDragStart={handleDragStart}
+      onClick={onSelect}
     >
       <img
         src={dataUrl}
@@ -145,7 +114,7 @@ export function PhotoThumb({ index, dataUrl, assigned }: PhotoThumbProps) {
       </span>
       {assigned && (
         <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-          <span className="text-green-600 text-xs font-bold">✓</span>
+          <span className="text-success text-xs font-bold">✓</span>
         </div>
       )}
     </div>

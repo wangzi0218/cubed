@@ -1,14 +1,18 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+const clickableClass =
+  "cursor-pointer transition-all hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5 active:scale-[0.98]";
+
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLDivElement> & { clickable?: boolean }
+>(({ className, clickable, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
       "rounded-xl border bg-card text-card-foreground shadow",
+      clickable && clickableClass,
       className
     )}
     {...props}

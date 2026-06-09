@@ -1,4 +1,5 @@
 import type { CubeState } from "@/types/cube";
+import { map2x2To3x3 } from "@/lib/cube-state";
 
 // Corner facelet indices — same layout as rubik-solver's cornerFacelet
 const V_CORNER_IDX: [number, number, number][] = [
@@ -112,27 +113,4 @@ export function validate3x3(state: CubeState): string | null {
   if (ci % 2 !== ei % 2) return "魔方排列奇偶性无效";
 
   return null;
-}
-
-function map2x2To3x3(state2: CubeState): string {
-  const faces = ["U", "R", "F", "D", "L", "B"] as const;
-  const result: string[] = new Array(54).fill("");
-
-  for (let f = 0; f < 6; f++) {
-    const offset3x3 = f * 9;
-    const offset2x2 = f * 4;
-
-    result[offset3x3 + 0] = state2[offset2x2 + 0];
-    result[offset3x3 + 2] = state2[offset2x2 + 1];
-    result[offset3x3 + 6] = state2[offset2x2 + 2];
-    result[offset3x3 + 8] = state2[offset2x2 + 3];
-    result[offset3x3 + 4] = faces[f];
-
-    result[offset3x3 + 1] = faces[f];
-    result[offset3x3 + 3] = faces[f];
-    result[offset3x3 + 5] = faces[f];
-    result[offset3x3 + 7] = faces[f];
-  }
-
-  return result.join("");
 }

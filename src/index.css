@@ -24,12 +24,14 @@
   --color-ring: oklch(0.708 0.028 285.823);
   --radius: 0.625rem;
 
-  --color-cube-white: #ffffff;
-  --color-cube-yellow: #ffd500;
-  --color-cube-red: #b71234;
-  --color-cube-orange: #ff5800;
-  --color-cube-blue: #0046ad;
-  --color-cube-green: #009b48;
+  --color-success: oklch(0.55 0.18 145);
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+}
+
+@keyframes flash {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
 }
 
 @layer base {
@@ -72,5 +74,6 @@
     --color-border: oklch(0.269 0.024 285.823);
     --color-input: oklch(0.269 0.024 285.823);
     --color-ring: oklch(0.439 0.034 285.823);
+    --color-success: oklch(0.6 0.18 145);
   }
 }

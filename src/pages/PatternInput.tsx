@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
   Camera,
   Check,
   Image,
@@ -10,25 +9,24 @@ import {
 } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
 import { PatternFaceSlot, PhotoThumb } from "@/components/cube/PatternFaceSlot";
-import { CubeViewer } from "@/components/cube/CubeViewer";
+import { CubePreviewLayout } from "@/components/layout/CubePreviewLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
 import { FACE_ORDER } from "@/types/cube";
-import { createSolvedState, validateState } from "@/lib/cube-state";
-import { solveCube } from "@/lib/solver";
+import { useSolve } from "@/hooks/useSolve";
 import {
-  extractFaceStickers,
   extractFaceStickersFromDataUrl,
   applyRotation,
   buildPatternState,
   allFacesAssigned,
 } from "@/lib/pattern-extraction";
 import type { FacePhoto, FaceAssignment } from "@/lib/pattern-extraction";
-import type { CubeState, FaceColor } from "@/types/cube";
 import { cn } from "@/lib/utils";
 
 type Phase = "intro" | "capture" | "assign" | "review";
 
-// Capture face image as data URL from ImageData
 function imageDataToDataUrl(imageData: ImageData): string {
   const canvas = document.createElement("canvas");
   canvas.width = imageData.width;
@@ -39,13 +37,7 @@ function imageDataToDataUrl(imageData: ImageData): string {
 }
 
 export function PatternInput() {
-  const {
-    cubeSize,
-    currentState,
-    setCurrentState,
-    setSolution,
-    setAppStep,
-  } = useCubeStore();
+  const { cubeSize, currentState, setAppStep } = useCubeStore();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [photos, setPhotos] = useState<FacePhoto[]>([]);
@@ -56,15 +48,16 @@ export function PatternInput() {
   const [stickers, setStickers] = useState<(string[] | null)[]>(
     () => Array(6).fill(null)
   );
+  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ face: number; pos: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  // Compute flat sticker images array for 3D viewer
+  const patternState = buildPatternState(assignments, cubeSize);
+  const { error, solve, clearError } = useSolve(patternState, cubeSize);
+
   const stickerImages = stickers.flat().every((s) => s !== null)
     ? (stickers.flat() as string[])
     : undefined;
 
-  // Extract stickers when entering review phase
   useEffect(() => {
     if (phase !== "review") return;
 
@@ -76,10 +69,7 @@ export function PatternInput() {
         const photo = photos[assignment.photoIndex];
         if (!photo) continue;
         try {
-          const raw = await extractFaceStickersFromDataUrl(
-            photo.dataUrl,
-            cubeSize
-          );
+          const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize);
           results[i] = applyRotation(raw, cubeSize, assignment.rotation);
         } catch {
           results[i] = null;
@@ -117,33 +107,25 @@ export function PatternInput() {
 
   // ── Assignment handlers ─────────────────────────────────────────────────
 
-  const handleDrop = useCallback(
-    (faceIdx: number, photoIdx: number) => {
-      setAssignments((prev) => {
-        const next = [...prev];
-        // If this photo was already assigned elsewhere, remove it
-        for (let i = 0; i < 6; i++) {
-          if (i !== faceIdx && next[i]?.photoIndex === photoIdx) {
-            next[i] = null;
-          }
+  const handleDrop = useCallback((faceIdx: number, photoIdx: number) => {
+    setAssignments((prev) => {
+      const next = [...prev];
+      for (let i = 0; i < 6; i++) {
+        if (i !== faceIdx && next[i]?.photoIndex === photoIdx) {
+          next[i] = null;
         }
-        next[faceIdx] = { photoIndex: photoIdx, rotation: 0 };
-        return next;
-      });
-    },
-    []
-  );
+      }
+      next[faceIdx] = { photoIndex: photoIdx, rotation: 0 };
+      return next;
+    });
+  }, []);
 
   const handleRotate = useCallback((faceIdx: number) => {
     setAssignments((prev) => {
       const next = [...prev];
       const current = next[faceIdx];
       if (!current) return next;
-      const newRotation = ((current.rotation + 90) % 360) as
-        | 0
-        | 90
-        | 180
-        | 270;
+      const newRotation = ((current.rotation + 90) % 360) as 0 | 90 | 180 | 270;
       next[faceIdx] = { ...current, rotation: newRotation };
       return next;
     });
@@ -166,7 +148,6 @@ export function PatternInput() {
       } else if (selectedCell.face === faceIdx && selectedCell.pos === pos) {
         setSelectedCell(null);
       } else {
-        // Swap stickers
         setStickers((prev) => {
           const next = prev.map((f) => (f ? [...f] : null));
           const srcFace = next[selectedCell.face];
@@ -183,30 +164,7 @@ export function PatternInput() {
     [selectedCell]
   );
 
-  // ── Solve ───────────────────────────────────────────────────────────────
-
-  const handleSolve = useCallback(() => {
-    const state = buildPatternState(assignments, cubeSize);
-    if (!validateState(state, cubeSize)) {
-      setError(
-        "每个颜色应该恰好出现 " +
-          cubeSize * cubeSize +
-          " 次，请检查分配是否正确"
-      );
-      return;
-    }
-    setError(null);
-    try {
-      setCurrentState(state);
-      const result = solveCube(state, cubeSize);
-      setSolution(result.solution, result.steps);
-      setAppStep("solution");
-    } catch (e: unknown) {
-      const msg =
-        e instanceof Error ? e.message : "求解失败，请检查魔方状态是否正确";
-      setError(msg);
-    }
-  }, [assignments, cubeSize, setCurrentState, setSolution, setAppStep]);
+  // ── Navigation ──────────────────────────────────────────────────────────
 
   const handleRestart = useCallback(() => {
     setPhase("intro");
@@ -214,114 +172,102 @@ export function PatternInput() {
     setCaptureIdx(0);
     setAssignments(Array(6).fill(null));
     setStickers(Array(6).fill(null));
-    setError(null);
-  }, []);
+    clearError();
+  }, [clearError]);
 
   const handleBackToAssign = useCallback(() => {
     setPhase("assign");
     setStickers(Array(6).fill(null));
-    setError(null);
-  }, []);
+    clearError();
+  }, [clearError]);
+
+  const backToInputMethod = useCallback(() => setAppStep("input-method"), [setAppStep]);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
-  return (
-    <div className="flex-1 flex flex-col">
-      <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            className="gap-2"
-            onClick={() => setAppStep("input-method")}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            返回
+  if (phase === "intro") {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-lg text-center space-y-8">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Image className="w-8 h-8 text-primary" />
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">图案识别</h3>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              适用于面图案不同的魔方（图片魔方、纹理魔方等）。
+            </p>
+
+            <div className="text-left space-y-2 mt-4">
+              <p className="text-sm font-medium">操作步骤</p>
+              <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+                <li>依次拍摄魔方的 6 个面</li>
+                <li>点击照片选中，再点击展开图中对应的面位置</li>
+                <li>旋转照片，让相邻面的边缘图案对齐</li>
+                <li>确认后系统提取状态并求解</li>
+              </ol>
+            </div>
+
+            <p className="text-xs text-muted-foreground/70 mt-3">
+              提示：拍摄时尽量正对魔方面，让网格线与贴纸边缘对齐
+            </p>
+          </div>
+
+          <Button size="lg" className="gap-2" onClick={() => setPhase("capture")}>
+            <Camera className="w-4 h-4" />
+            开始拍摄
           </Button>
-          <h2 className="text-xl font-bold tracking-tight">
-            {cubeSize}×{cubeSize} 图案识别
-          </h2>
         </div>
+      </div>
+    );
+  }
 
-        {/* ── Phase: intro ──────────────────────────────────────────────── */}
-        {phase === "intro" && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-8 max-w-lg mx-auto text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Image className="w-8 h-8 text-primary" />
+  if (phase === "capture") {
+    return (
+      <div className="flex-1 flex flex-col">
+        <CameraCapture
+          faceLabel={`第 ${captureIdx + 1} 面`}
+          faceIndex={captureIdx}
+          totalFaces={6}
+          onCapture={handleCapture}
+        />
+
+        {photos.length > 0 && (
+          <div className="bg-muted/50 px-4 py-3">
+            <div className="flex items-center gap-2 justify-center">
+              <span className="text-xs text-muted-foreground mr-2">已拍摄：</span>
+              {photos.map((photo, i) => (
+                <button
+                  key={i}
+                  className={cn(
+                    "w-12 h-12 rounded border-2 overflow-hidden transition-all",
+                    i === captureIdx
+                      ? "border-primary ring-2 ring-primary/30"
+                      : "border-border hover:border-primary/50"
+                  )}
+                  onClick={() => handleRetakePhoto(i)}
+                  title={`重拍第 ${i + 1} 面`}
+                >
+                  <img src={photo.dataUrl} alt={`Face ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
-
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold">图案识别</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                适用于面图案不同的魔方（图片魔方、纹理魔方等）。
-              </p>
-
-              <div className="text-left space-y-2 mt-4">
-                <p className="text-sm font-medium">操作步骤</p>
-                <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-                  <li>依次拍摄魔方的 6 个面</li>
-                  <li>将每张照片拖到展开图中对应的面位置</li>
-                  <li>旋转照片，让相邻面的边缘图案对齐</li>
-                  <li>确认后系统提取状态并求解</li>
-                </ol>
-              </div>
-
-              <p className="text-xs text-muted-foreground/70 mt-3">
-                提示：拍摄时尽量正对魔方面，让网格线与贴纸边缘对齐
-              </p>
-            </div>
-
-            <Button size="lg" className="gap-2" onClick={() => setPhase("capture")}>
-              <Camera className="w-4 h-4" />
-              开始拍摄
-            </Button>
           </div>
         )}
+      </div>
+    );
+  }
 
-        {/* ── Phase: capture ────────────────────────────────────────────── */}
-        {phase === "capture" && (
-          <div className="flex-1 flex flex-col">
-            <CameraCapture
-              faceLabel={`第 ${captureIdx + 1} 面`}
-              faceIndex={captureIdx}
-              totalFaces={6}
-              onCapture={handleCapture}
-            />
+  if (phase === "assign") {
+    return (
+      <div className="flex-1 flex flex-col">
+        <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
+          <PageHeader
+            title={`${cubeSize}×${cubeSize} 图案识别`}
+            onBack={backToInputMethod}
+          />
 
-            {/* Photo preview bar */}
-            {photos.length > 0 && (
-              <div className="bg-muted/50 px-4 py-3">
-                <div className="flex items-center gap-2 justify-center">
-                  <span className="text-xs text-muted-foreground mr-2">
-                    已拍摄：
-                  </span>
-                  {photos.map((photo, i) => (
-                    <button
-                      key={i}
-                      className={cn(
-                        "w-12 h-12 rounded border-2 overflow-hidden transition-all",
-                        i === captureIdx
-                          ? "border-primary ring-2 ring-primary/30"
-                          : "border-border hover:border-primary/50"
-                      )}
-                      onClick={() => handleRetakePhoto(i)}
-                      title={`重拍第 ${i + 1} 面`}
-                    >
-                      <img
-                        src={photo.dataUrl}
-                        alt={`Face ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Phase: assign ─────────────────────────────────────────────── */}
-        {phase === "assign" && (
           <div className="flex-1 flex flex-col lg:flex-row gap-8">
             {/* Left: photo list */}
             <div className="lg:w-48 flex flex-col gap-4">
@@ -333,86 +279,67 @@ export function PatternInput() {
                     index={i}
                     dataUrl={photo.dataUrl}
                     assigned={assignments.some((a) => a?.photoIndex === i)}
+                    selected={selectedPhotoIdx === i}
+                    onSelect={() => setSelectedPhotoIdx(selectedPhotoIdx === i ? null : i)}
                   />
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-auto">
-                拖拽照片到右侧面位
+                {selectedPhotoIdx !== null ? "点击右侧面位分配" : "点击照片选中，再点击面位分配"}
               </p>
             </div>
 
             {/* Right: cube net face slots */}
             <div className="flex-1 flex flex-col items-center gap-6">
-              <p className="text-sm font-medium">
-                将照片分配到展开图的面位置
-              </p>
+              <p className="text-sm font-medium">将照片分配到展开图的面位置</p>
 
-              {/* Cube net layout: U on top, L F R B in middle, D on bottom */}
               <div className="flex flex-col items-center gap-2">
-                {/* Row 1: U */}
                 <div className="flex justify-center" style={{ marginLeft: "5rem" }}>
                   <PatternFaceSlot
                     face="U"
-                    photoUrl={
-                      assignments[0]
-                        ? photos[assignments[0].photoIndex]?.dataUrl ?? null
-                        : null
-                    }
+                    photoUrl={assignments[0] ? photos[assignments[0].photoIndex]?.dataUrl ?? null : null}
                     rotation={assignments[0]?.rotation ?? 0}
-                    onDrop={(photoIdx) => handleDrop(0, photoIdx)}
+                    selected={selectedPhotoIdx !== null}
+                    onSlotTap={() => { if (selectedPhotoIdx !== null) { handleDrop(0, selectedPhotoIdx); setSelectedPhotoIdx(null); } }}
                     onRotate={() => handleRotate(0)}
                     onRemove={() => handleRemove(0)}
                   />
                 </div>
 
-                {/* Row 2: L, F, R, B */}
                 <div className="flex gap-2">
                   {[4, 2, 1, 5].map((faceIdx) => (
                     <PatternFaceSlot
                       key={faceIdx}
                       face={FACE_ORDER[faceIdx]}
-                      photoUrl={
-                        assignments[faceIdx]
-                          ? photos[assignments[faceIdx].photoIndex]?.dataUrl ??
-                            null
-                          : null
-                      }
+                      photoUrl={assignments[faceIdx] ? photos[assignments[faceIdx].photoIndex]?.dataUrl ?? null : null}
                       rotation={assignments[faceIdx]?.rotation ?? 0}
-                      onDrop={(photoIdx) => handleDrop(faceIdx, photoIdx)}
+                      selected={selectedPhotoIdx !== null}
+                      onSlotTap={() => { if (selectedPhotoIdx !== null) { handleDrop(faceIdx, selectedPhotoIdx); setSelectedPhotoIdx(null); } }}
                       onRotate={() => handleRotate(faceIdx)}
                       onRemove={() => handleRemove(faceIdx)}
                     />
                   ))}
                 </div>
 
-                {/* Row 3: D */}
                 <div className="flex justify-center" style={{ marginLeft: "5rem" }}>
                   <PatternFaceSlot
                     face="D"
-                    photoUrl={
-                      assignments[3]
-                        ? photos[assignments[3].photoIndex]?.dataUrl ?? null
-                        : null
-                    }
+                    photoUrl={assignments[3] ? photos[assignments[3].photoIndex]?.dataUrl ?? null : null}
                     rotation={assignments[3]?.rotation ?? 0}
-                    onDrop={(photoIdx) => handleDrop(3, photoIdx)}
+                    selected={selectedPhotoIdx !== null}
+                    onSlotTap={() => { if (selectedPhotoIdx !== null) { handleDrop(3, selectedPhotoIdx); setSelectedPhotoIdx(null); } }}
                     onRotate={() => handleRotate(3)}
                     onRemove={() => handleRemove(3)}
                   />
                 </div>
               </div>
 
-              {/* Status + actions */}
               <div className="flex flex-col items-center gap-3 mt-4">
                 <p className="text-sm text-muted-foreground">
                   已分配 {assignments.filter((a) => a !== null).length} / 6 面
                 </p>
                 <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={handleRestart}
-                  >
+                  <Button variant="outline" className="gap-2" onClick={handleRestart}>
                     <RotateCcw className="w-4 h-4" />
                     重来
                   </Button>
@@ -428,62 +355,43 @@ export function PatternInput() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* ── Phase: review ─────────────────────────────────────────────── */}
-        {phase === "review" && (
-          <div className="flex flex-col lg:flex-row gap-8 flex-1">
-            {/* Left: 3D preview */}
-            <div className="flex-1 flex flex-col items-center">
-              <div className="w-full max-w-md aspect-square rounded-xl border bg-card/50 overflow-hidden">
-                <CubeViewer state={currentState} size={cubeSize} stickerImages={stickerImages} />
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                拖拽旋转查看 3D 预览
-              </p>
-            </div>
-
-            {/* Right: sticker grid + actions */}
-            <div className="flex-1 flex flex-col gap-6">
-              <div>
-                <p className="text-sm font-medium mb-3">提取结果</p>
-                <PatternStickerGrid
-                  stickers={stickers}
-                  assignments={assignments}
-                  size={cubeSize}
-                  selectedCell={selectedCell}
-                  onStickerClick={handleStickerClick}
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  点击两个格子可交换贴纸位置
-                </p>
-              </div>
-
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
-                  {error}
-                </p>
-              )}
-
-              <div className="flex gap-3 mt-auto">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleBackToAssign}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  修改分配
-                </Button>
-                <Button className="flex-1 gap-2" onClick={handleSolve}>
-                  <Zap className="w-4 h-4" />
-                  开始求解
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  // phase === "review"
+  return (
+    <CubePreviewLayout
+      title={`${cubeSize}×${cubeSize} 图案识别`}
+      onBack={backToInputMethod}
+      state={currentState}
+      size={cubeSize}
+      stickerImages={stickerImages}
+    >
+      <div>
+        <p className="text-sm font-medium mb-3">提取结果</p>
+        <PatternStickerGrid
+          stickers={stickers}
+          assignments={assignments}
+          size={cubeSize}
+          selectedCell={selectedCell}
+          onStickerClick={handleStickerClick}
+        />
+        <p className="text-xs text-muted-foreground mt-2">
+          点击两个格子可交换贴纸位置
+        </p>
+      </div>
+
+      {error && <ErrorMessage message={error} />}
+
+      <ActionBar
+        actions={[
+          { label: "修改分配", icon: RotateCcw, onClick: handleBackToAssign, variant: "outline" },
+          { label: "开始求解", icon: Zap, onClick: solve, flex: true },
+        ]}
+      />
+    </CubePreviewLayout>
   );
 }
 
@@ -503,7 +411,9 @@ function PatternStickerGrid({
   selectedCell: { face: number; pos: number } | null;
   onStickerClick: (faceIdx: number, pos: number) => void;
 }) {
-  const cellSize = size === 2 ? "w-12 h-12" : "w-10 h-10";
+  const cellStyle = size === 2
+    ? { width: "min(12vw, 3rem)", height: "min(12vw, 3rem)" }
+    : { width: "min(10vw, 2.5rem)", height: "min(10vw, 2.5rem)" };
 
   function renderFace(faceIdx: number, label: string) {
     const faceStickers = stickers[faceIdx];
@@ -519,16 +429,12 @@ function PatternStickerGrid({
             {Array.from({ length: size * size }).map((_, i) => (
               <div
                 key={i}
-                className={cn(
-                  cellSize,
-                  "border border-border/30 rounded-sm bg-muted/30"
-                )}
+                className="border border-border/30 rounded-sm bg-muted/30"
+                style={cellStyle}
               />
             ))}
           </div>
-          <span className="text-xs text-muted-foreground mt-1 font-medium">
-            {label}
-          </span>
+          <span className="text-xs text-muted-foreground mt-1 font-medium">{label}</span>
         </div>
       );
     }
@@ -540,18 +446,17 @@ function PatternStickerGrid({
           style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
         >
           {faceStickers.map((stickerUrl, i) => {
-            const isSelected =
-              selectedCell?.face === faceIdx && selectedCell?.pos === i;
+            const isSelected = selectedCell?.face === faceIdx && selectedCell?.pos === i;
             return (
               <button
                 key={i}
                 className={cn(
-                  cellSize,
                   "border rounded-sm overflow-hidden cursor-pointer transition-all",
                   isSelected
                     ? "border-primary ring-2 ring-primary/50 scale-110 z-10"
                     : "border-border/30 hover:border-primary/50 hover:scale-105"
                 )}
+                style={cellStyle}
                 onClick={() => onStickerClick(faceIdx, i)}
               >
                 <img
@@ -564,34 +469,23 @@ function PatternStickerGrid({
             );
           })}
         </div>
-        <span className="text-xs text-muted-foreground mt-1 font-medium">
-          {label}
-        </span>
+        <span className="text-xs text-muted-foreground mt-1 font-medium">{label}</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      {/* Row 1: U */}
-      <div
-        className="flex justify-center"
-        style={{ marginLeft: `${size * 1.75}rem` }}
-      >
+    <div className="flex flex-col items-center gap-1 overflow-x-auto">
+      <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
         {renderFace(0, "Up")}
       </div>
-      {/* Row 2: L, F, R, B */}
-      <div className="flex gap-1">
+      <div className="flex gap-px sm:gap-1">
         {renderFace(4, "Left")}
         {renderFace(2, "Front")}
         {renderFace(1, "Right")}
         {renderFace(5, "Back")}
       </div>
-      {/* Row 3: D */}
-      <div
-        className="flex justify-center"
-        style={{ marginLeft: `${size * 1.75}rem` }}
-      >
+      <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
         {renderFace(3, "Down")}
       </div>
     </div>

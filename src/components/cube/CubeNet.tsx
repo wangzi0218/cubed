@@ -21,8 +21,9 @@ interface CubeNetProps {
  * 2x2 layout: same structure, 2x2 per face
  */
 export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetProps) {
-  const cellSize = size === 2 ? "w-12 h-12" : "w-10 h-10";
-  const gap = "gap-0.5";
+  const cellStyle = size === 2
+    ? { width: "min(12vw, 3rem)", height: "min(12vw, 3rem)" }
+    : { width: "min(10vw, 2.5rem)", height: "min(10vw, 2.5rem)" };
 
   function handleCellClick(face: FaceColor, pos: number) {
     const newState = setSticker(state, face, pos, selectedColor, size);
@@ -40,11 +41,10 @@ export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetPr
           <button
             key={pos}
             className={cn(
-              cellSize,
               "border border-border/30 rounded-sm cursor-pointer transition-transform hover:scale-105 active:scale-95",
               "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
             )}
-            style={{ backgroundColor: hex }}
+            style={{ ...cellStyle, backgroundColor: hex }}
             onClick={() => handleCellClick(face, pos)}
             title={`${face} - ${FACE_COLORS[color].label}`}
           />
@@ -54,7 +54,7 @@ export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetPr
 
     return (
       <div className="flex flex-col items-center">
-        <div className={cn(`grid grid-cols-${size}`, gap)} style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}>
+        <div className="grid gap-px sm:gap-0.5" style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}>
           {cells}
         </div>
         <span className="text-xs text-muted-foreground mt-1 font-medium">{label}</span>
@@ -63,20 +63,20 @@ export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetPr
   }
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1 overflow-x-auto">
       {/* Row 1: U face */}
-      <div className="flex justify-center" style={{ marginLeft: `${size * 1.75}rem` }}>
+      <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
         {renderFace("U", "Up")}
       </div>
       {/* Row 2: L, F, R, B faces */}
-      <div className="flex gap-1">
+      <div className="flex gap-px sm:gap-1">
         {renderFace("L", "Left")}
         {renderFace("F", "Front")}
         {renderFace("R", "Right")}
         {renderFace("B", "Back")}
       </div>
       {/* Row 3: D face */}
-      <div className="flex justify-center" style={{ marginLeft: `${size * 1.75}rem` }}>
+      <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
         {renderFace("D", "Down")}
       </div>
     </div>

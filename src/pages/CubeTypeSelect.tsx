@@ -2,7 +2,10 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useCubeStore } from "@/stores/cube-store";
+import { FACE_COLORS } from "@/types/cube";
 import type { CubeSize } from "@/types/cube";
+
+const { R, F, D, B, U, L } = FACE_COLORS;
 
 const cubeTypes = [
   {
@@ -11,15 +14,8 @@ const cubeTypes = [
     description: "口袋魔方，入门级",
     grid: (
       <div className="grid grid-cols-2 gap-1 w-16 h-16">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-sm"
-            style={{
-              backgroundColor:
-                i === 0 ? "#b71234" : i === 1 ? "#0046ad" : i === 2 ? "#ffd500" : "#009b48",
-            }}
-          />
+        {[R, F, D, B].map((c, i) => (
+          <div key={i} className="rounded-sm" style={{ backgroundColor: c.hex }} />
         ))}
       </div>
     ),
@@ -30,11 +26,9 @@ const cubeTypes = [
     description: "经典三阶魔方",
     grid: (
       <div className="grid grid-cols-3 gap-0.5 w-16 h-16">
-        {["#b71234", "#0046ad", "#ffd500", "#009b48", "#ffffff", "#ff5800", "#b71234", "#ffd500", "#0046ad"].map(
-          (color, i) => (
-            <div key={i} className="rounded-sm" style={{ backgroundColor: color }} />
-          )
-        )}
+        {[R, F, D, B, U, L, R, D, F].map((c, i) => (
+          <div key={i} className="rounded-sm" style={{ backgroundColor: c.hex }} />
+        ))}
       </div>
     ),
   },
@@ -68,7 +62,7 @@ export function CubeTypeSelect() {
           {cubeTypes.map((ct) => (
             <Card
               key={ct.size}
-              className="cursor-pointer hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5 transition-all"
+              clickable
               onClick={() => {
                 setCubeSize(ct.size);
                 setAppStep(flowOrigin === "scramble" ? "scramble" : "input-method");

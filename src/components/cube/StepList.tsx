@@ -15,7 +15,7 @@ export function StepList({ steps, currentStepIndex, onStepClick }: StepListProps
     <div className="flex flex-col gap-1 max-h-[400px] overflow-y-auto pr-1">
       <div
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors",
+          "flex items-center gap-3 px-3 py-2 min-h-[44px] rounded-lg cursor-pointer transition-colors",
           currentStepIndex === -1
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:bg-muted"
@@ -34,7 +34,7 @@ export function StepList({ steps, currentStepIndex, onStepClick }: StepListProps
           <div
             key={step.index}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors",
+              "flex items-center gap-3 px-3 py-2 min-h-[44px] rounded-lg cursor-pointer transition-colors",
               isActive
                 ? "bg-primary text-primary-foreground"
                 : isDone

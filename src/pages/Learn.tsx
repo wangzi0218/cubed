@@ -68,7 +68,7 @@ function StageCard({ stage }: { stage: Stage }) {
 
   return (
     <Card
-      className="transition-all cursor-pointer hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5"
+      clickable
       onClick={() => setExpanded(!expanded)}
     >
       <CardHeader className="items-center text-center">

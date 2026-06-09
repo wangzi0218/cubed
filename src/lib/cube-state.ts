@@ -84,3 +84,31 @@ export function setSticker(
   newState[getStickerIndex(face, pos, size)] = color;
   return newState;
 }
+
+/**
+ * Map a 2x2 state (24 stickers) to a 3x3 state string (54 characters).
+ * Corner stickers are placed at 3x3 corner positions; edge and center
+ * positions are filled with the face's own color.
+ */
+export function map2x2To3x3(state2: CubeState): string {
+  const faces = ["U", "R", "F", "D", "L", "B"] as const;
+  const result: string[] = new Array(54).fill("");
+
+  for (let f = 0; f < 6; f++) {
+    const offset3x3 = f * 9;
+    const offset2x2 = f * 4;
+
+    result[offset3x3 + 0] = state2[offset2x2 + 0];
+    result[offset3x3 + 2] = state2[offset2x2 + 1];
+    result[offset3x3 + 6] = state2[offset2x2 + 2];
+    result[offset3x3 + 8] = state2[offset2x2 + 3];
+    result[offset3x3 + 4] = faces[f];
+
+    result[offset3x3 + 1] = faces[f];
+    result[offset3x3 + 3] = faces[f];
+    result[offset3x3 + 5] = faces[f];
+    result[offset3x3 + 7] = faces[f];
+  }
+
+  return result.join("");
+}

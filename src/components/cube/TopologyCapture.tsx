@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, RotateCcw, Check, RefreshCw } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
-import { rgbToHsv } from "@/lib/color-detection";
+import { rgbToHsv, classifyPixel } from "@/lib/color-detection";
 import { FACE_COLORS, FACE_ORDER } from "@/types/cube";
 import type { FaceColor } from "@/types/cube";
 import { cn } from "@/lib/utils";
@@ -15,40 +15,6 @@ interface TopologyCaptureProps {
   captured: boolean;
   capturedColors: FaceColor[];
   onConfirm: () => void;
-}
-
-// ── HSV → FaceColor classifier (same logic as color-detection.ts) ──────────
-
-function classifyPixel(h: number, s: number, v: number): FaceColor {
-  if (s < 0.15 && v > 0.85) return "U";
-  if (h >= 20 && h <= 40 && s > 0.5 && v > 0.7) return "D";
-  if (((h >= 345 && h <= 360) || (h >= 0 && h <= 15)) && s > 0.4 && v > 0.3 && v < 0.9)
-    return "R";
-  if (h > 15 && h < 20 && s > 0.5 && v > 0.5) return "L";
-  if (h >= 20 && h <= 30 && s > 0.5 && v > 0.5 && v <= 0.7) return "L";
-  if (h >= 195 && h <= 260 && s > 0.3 && v > 0.2 && v < 0.8) return "F";
-  if (h >= 80 && h <= 170 && s > 0.3 && v > 0.2 && v < 0.8) return "B";
-  if (s < 0.25) return "U";
-
-  const hueTargets: { hue: number; color: FaceColor }[] = [
-    { hue: 0, color: "U" },
-    { hue: 30, color: "D" },
-    { hue: 0, color: "R" },
-    { hue: 25, color: "L" },
-    { hue: 220, color: "F" },
-    { hue: 130, color: "B" },
-  ];
-  let bestDist = Infinity;
-  let bestColor: FaceColor = "U";
-  for (const target of hueTargets) {
-    let dist = Math.abs(h - target.hue);
-    if (dist > 180) dist = 360 - dist;
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestColor = target.color;
-    }
-  }
-  return bestColor;
 }
 
 /**
