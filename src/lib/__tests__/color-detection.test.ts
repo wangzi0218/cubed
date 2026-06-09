@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rgbToHsv, classifyPixel } from "../color-detection";
+import { rgbToHsv, classifyPixel, detectFaceColors } from "../color-detection";
 
 describe("rgbToHsv", () => {
   it("converts pure red", () => {
@@ -135,5 +135,89 @@ describe("classifyPixel", () => {
     // Red hue but v too high for early return (v < 0.9 required)
     // Falls to fallback, closest hue target 0 → U (first match)
     expect(classifyPixel(5, 0.8, 0.95)).toBe("U");
+  });
+});
+
+// ── detectFaceColors ─────────────────────────────────────────────────────
+
+function makeSolidColorImageData(
+  r: number,
+  g: number,
+  b: number,
+  gridSize: number
+): ImageData {
+  const cellSize = 30;
+  const size = gridSize * cellSize;
+  const data = new Uint8ClampedArray(size * size * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = r;
+    data[i + 1] = g;
+    data[i + 2] = b;
+    data[i + 3] = 255;
+  }
+  return { data, width: size, height: size } as ImageData;
+}
+
+describe("detectFaceColors", () => {
+  it("detects all-red image as R for 3x3", () => {
+    const img = makeSolidColorImageData(200, 30, 30, 3);
+    const result = detectFaceColors(img, 3);
+    expect(result).toHaveLength(9);
+    expect(result.every((c) => c === "R")).toBe(true);
+  });
+
+  it("detects all-white image as U for 2x2", () => {
+    const img = makeSolidColorImageData(240, 240, 240, 2);
+    const result = detectFaceColors(img, 2);
+    expect(result).toHaveLength(4);
+    expect(result.every((c) => c === "U")).toBe(true);
+  });
+
+  it("detects all-blue image as F for 3x3", () => {
+    const img = makeSolidColorImageData(30, 60, 180, 3);
+    const result = detectFaceColors(img, 3);
+    expect(result.every((c) => c === "F")).toBe(true);
+  });
+
+  it("detects all-yellow image as D for 2x2", () => {
+    const img = makeSolidColorImageData(220, 200, 30, 2);
+    const result = detectFaceColors(img, 2);
+    expect(result.every((c) => c === "D")).toBe(true);
+  });
+
+  it("detects all-green image as B for 3x3", () => {
+    const img = makeSolidColorImageData(30, 140, 50, 3);
+    const result = detectFaceColors(img, 3);
+    expect(result.every((c) => c === "B")).toBe(true);
+  });
+
+  it("detects mixed colors in different cells", () => {
+    // 2x2 grid: top-left red, top-right blue, bottom-left green, bottom-right white
+    const cellSize = 30;
+    const size = 2 * cellSize;
+    const data = new Uint8ClampedArray(size * size * 4);
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        const idx = (row * size + col) * 4;
+        const isTop = row < cellSize;
+        const isLeft = col < cellSize;
+        if (isTop && isLeft) {
+          data[idx] = 200; data[idx+1] = 30; data[idx+2] = 30; // red
+        } else if (isTop && !isLeft) {
+          data[idx] = 30; data[idx+1] = 60; data[idx+2] = 180; // blue
+        } else if (!isTop && isLeft) {
+          data[idx] = 30; data[idx+1] = 140; data[idx+2] = 50; // green
+        } else {
+          data[idx] = 240; data[idx+1] = 240; data[idx+2] = 240; // white
+        }
+        data[idx + 3] = 255;
+      }
+    }
+    const img = { data, width: size, height: size } as ImageData;
+    const result = detectFaceColors(img, 2);
+    expect(result[0]).toBe("R"); // top-left
+    expect(result[1]).toBe("F"); // top-right
+    expect(result[2]).toBe("B"); // bottom-left
+    expect(result[3]).toBe("U"); // bottom-right
   });
 });

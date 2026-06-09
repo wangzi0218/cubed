@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { applyRotation, allFacesAssigned } from "../pattern-extraction";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { applyRotation, allFacesAssigned, extractFaceStickers } from "../pattern-extraction";
 import type { FaceAssignment } from "../pattern-extraction";
 
 describe("applyRotation", () => {
@@ -88,5 +88,85 @@ describe("allFacesAssigned", () => {
   it("returns false when all are null", () => {
     const assignments = Array(6).fill(null);
     expect(allFacesAssigned(assignments)).toBe(false);
+  });
+});
+
+// ── extractFaceStickers ────────────────────────────────────────────────
+
+describe("extractFaceStickers", () => {
+  let mockCtx: {
+    putImageData: ReturnType<typeof vi.fn>;
+    drawImage: ReturnType<typeof vi.fn>;
+    clearRect: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(() => {
+    mockCtx = {
+      putImageData: vi.fn(),
+      drawImage: vi.fn(),
+      clearRect: vi.fn(),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      mockCtx as unknown as CanvasRenderingContext2D
+    );
+    let callCount = 0;
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockImplementation(
+      () => `data:image/png;base64,cell${callCount++}`
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns size*size stickers for a 3x3 grid", () => {
+    const data = new Uint8ClampedArray(90 * 90 * 4);
+    const imageData = { data, width: 90, height: 90 } as ImageData;
+    const stickers = extractFaceStickers(imageData, 3);
+    expect(stickers).toHaveLength(9);
+  });
+
+  it("returns size*size stickers for a 2x2 grid", () => {
+    const data = new Uint8ClampedArray(60 * 60 * 4);
+    const imageData = { data, width: 60, height: 60 } as ImageData;
+    const stickers = extractFaceStickers(imageData, 2);
+    expect(stickers).toHaveLength(4);
+  });
+
+  it("returns data URL strings", () => {
+    const data = new Uint8ClampedArray(90 * 90 * 4);
+    const imageData = { data, width: 90, height: 90 } as ImageData;
+    const stickers = extractFaceStickers(imageData, 3);
+    expect(stickers[0]).toBe("data:image/png;base64,cell0");
+    expect(stickers[8]).toBe("data:image/png;base64,cell8");
+  });
+
+  it("puts source image data on first canvas", () => {
+    const data = new Uint8ClampedArray(90 * 90 * 4);
+    const imageData = { data, width: 90, height: 90 } as ImageData;
+    extractFaceStickers(imageData, 3);
+    expect(mockCtx.putImageData).toHaveBeenCalledWith(imageData, 0, 0);
+  });
+
+  it("draws each cell with center 60% margin", () => {
+    const data = new Uint8ClampedArray(90 * 90 * 4);
+    const imageData = { data, width: 90, height: 90 } as ImageData;
+    extractFaceStickers(imageData, 3);
+    // 3x3 grid: cellW = cellH = 30
+    // First cell (0,0): margin 0.2 → sx=6, sy=6, sw=18, sh=18
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+    const firstCall = mockCtx.drawImage.mock.calls[0];
+    expect(firstCall[1]).toBe(6);  // sx
+    expect(firstCall[2]).toBe(6);  // sy
+    expect(firstCall[3]).toBe(18); // sw
+    expect(firstCall[4]).toBe(18); // sh
+  });
+
+  it("clears output canvas before each cell draw", () => {
+    const data = new Uint8ClampedArray(60 * 60 * 4);
+    const imageData = { data, width: 60, height: 60 } as ImageData;
+    extractFaceStickers(imageData, 2);
+    // 4 cells → 4 clearRect calls
+    expect(mockCtx.clearRect).toHaveBeenCalledTimes(4);
   });
 });
