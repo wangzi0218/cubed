@@ -10,19 +10,28 @@ import { useCubeStore } from "@/stores/cube-store";
 import { useSolve } from "@/hooks/useSolve";
 import { createSolvedState } from "@/lib/cube-state";
 import { detectFaceColors } from "@/lib/color-detection";
-import { FACE_ORDER } from "@/types/cube";
+import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
 import type { FaceColor, CubeState } from "@/types/cube";
 
 type Phase = "capture" | "review";
 
 const FACE_LABELS: Record<FaceColor, string> = {
-  U: "上面 (U)",
-  R: "右面 (R)",
-  F: "前面 (F)",
-  D: "下面 (D)",
-  L: "左面 (L)",
-  B: "后面 (B)",
+  U: "上面 (白)",
+  R: "右面 (红)",
+  F: "前面 (蓝)",
+  D: "下面 (黄)",
+  L: "左面 (橙)",
+  B: "后面 (绿)",
 };
+
+function imageDataToDataUrl(imageData: ImageData): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = imageData.width;
+  canvas.height = imageData.height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/jpeg", 0.7);
+}
 
 export function PhotoInput() {
   const { cubeSize, setAppStep } = useCubeStore();
@@ -30,6 +39,9 @@ export function PhotoInput() {
   const [phase, setPhase] = useState<Phase>("capture");
   const [currentFaceIdx, setCurrentFaceIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
+  const [capturedPhotos, setCapturedPhotos] = useState<(string | null)[]>(
+    () => Array(6).fill(null)
+  );
 
   const stickersPerFace = cubeSize * cubeSize;
   const [detectedState, setDetectedState] = useState<CubeState>(
@@ -42,6 +54,13 @@ export function PhotoInput() {
     (imageData: ImageData) => {
       const colors = detectFaceColors(imageData, cubeSize);
       const faceOffset = currentFaceIdx * stickersPerFace;
+      const dataUrl = imageDataToDataUrl(imageData);
+
+      setCapturedPhotos((prev) => {
+        const next = [...prev];
+        next[currentFaceIdx] = dataUrl;
+        return next;
+      });
 
       setDetectedState((prev) => {
         const next = [...prev];
@@ -63,8 +82,14 @@ export function PhotoInput() {
   const handleBackToCapture = useCallback(() => {
     setPhase("capture");
     setCurrentFaceIdx(0);
+    setCapturedPhotos(Array(6).fill(null));
     setDetectedState(createSolvedState(cubeSize));
   }, [cubeSize]);
+
+  const handleRetakePhoto = useCallback((idx: number) => {
+    setCurrentFaceIdx(idx);
+    setPhase("capture");
+  }, []);
 
   // ── Capture phase ──────────────────────────────────────────────────────
 
@@ -90,6 +115,36 @@ export function PhotoInput() {
           totalFaces={6}
           onCapture={handleCapture}
         />
+
+        {capturedPhotos.some((p) => p !== null) && (
+          <div className="bg-muted/50 px-4 py-3">
+            <div className="flex items-center gap-2 justify-center">
+              <span className="text-xs text-muted-foreground mr-2">已拍摄：</span>
+              {capturedPhotos.map((photo, i) => (
+                <button
+                  key={i}
+                  className={`w-12 h-12 rounded border-2 overflow-hidden transition-all ${
+                    photo
+                      ? i === currentFaceIdx
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-border hover:border-primary/50"
+                      : "border-dashed border-muted-foreground/30"
+                  }`}
+                  onClick={() => photo && handleRetakePhoto(i)}
+                  title={photo ? `重拍第 ${i + 1} 面` : `第 ${i + 1} 面未拍摄`}
+                >
+                  {photo ? (
+                    <img src={photo} alt={`Face ${i + 1}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                      {i + 1}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -103,8 +158,71 @@ export function PhotoInput() {
       state={detectedState}
       size={cubeSize}
     >
+      {/* Captured photos summary */}
       <div>
-        <p className="text-sm font-medium mb-3">选择颜色</p>
+        <p className="text-sm font-medium mb-3">拍摄的照片</p>
+        <div className="flex gap-2 flex-wrap">
+          {capturedPhotos.map((photo, i) => {
+            const face = FACE_ORDER[i];
+            const detectedColor = detectedState[i * stickersPerFace];
+            return (
+              <button
+                key={i}
+                className="flex flex-col items-center gap-1 cursor-pointer group"
+                onClick={() => handleRetakePhoto(i)}
+                title={`点击重拍 ${FACE_LABELS[face]}`}
+              >
+                <div className="w-14 h-14 rounded-lg border-2 border-border overflow-hidden group-hover:border-primary/50 transition-colors">
+                  {photo ? (
+                    <img src={photo} alt={FACE_LABELS[face]} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                      无
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span
+                    className="w-3 h-3 rounded-full border border-border/50"
+                    style={{ backgroundColor: FACE_COLORS[detectedColor]?.hex ?? "#000" }}
+                  />
+                  <span className="text-xs text-muted-foreground">{face}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">点击照片可重拍该面</p>
+      </div>
+
+      {/* Detected color summary */}
+      <div>
+        <p className="text-sm font-medium mb-3">识别到的颜色分布</p>
+        <div className="flex flex-wrap gap-2">
+          {FACE_ORDER.map((face) => {
+            const count = detectedState.filter((c) => c === face).length;
+            return (
+              <span
+                key={face}
+                className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-muted"
+              >
+                <span
+                  className="w-3 h-3 rounded-full border border-border/50"
+                  style={{ backgroundColor: FACE_COLORS[face].hex }}
+                />
+                {face}: {count}格
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Color correction */}
+      <div>
+        <p className="text-sm font-medium mb-2">修正识别结果</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          如果某个格子识别不准确，先选颜色，再点击格子修正
+        </p>
         <ColorPalette
           selectedColor={selectedColor}
           onSelect={setSelectedColor}
@@ -112,7 +230,6 @@ export function PhotoInput() {
       </div>
 
       <div>
-        <p className="text-sm font-medium mb-3">点击格子修正识别结果</p>
         <div className="overflow-x-auto">
           <CubeNet
             state={detectedState}
@@ -127,7 +244,7 @@ export function PhotoInput() {
 
       <ActionBar
         actions={[
-          { label: "重拍", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
+          { label: "全部重拍", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
           { label: "开始求解", icon: Check, onClick: solve, flex: true },
         ]}
       />
