@@ -86,16 +86,17 @@ export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetPr
 interface ColorPaletteProps {
   selectedColor: FaceColor;
   onSelect: (color: FaceColor) => void;
+  showFaceLabel?: boolean;
 }
 
-export function ColorPalette({ selectedColor, onSelect }: ColorPaletteProps) {
+export function ColorPalette({ selectedColor, onSelect, showFaceLabel }: ColorPaletteProps) {
   return (
     <div className="flex gap-2 flex-wrap justify-center">
       {FACE_ORDER.map((face) => (
         <button
           key={face}
           className={cn(
-            "w-10 h-10 rounded-lg border-2 transition-all cursor-pointer",
+            "w-10 h-10 rounded-lg border-2 transition-all cursor-pointer relative",
             "hover:scale-110 active:scale-95",
             "focus:outline-none focus:ring-2 focus:ring-ring",
             selectedColor === face
@@ -105,7 +106,16 @@ export function ColorPalette({ selectedColor, onSelect }: ColorPaletteProps) {
           style={{ backgroundColor: FACE_COLORS[face].hex }}
           onClick={() => onSelect(face)}
           title={FACE_COLORS[face].label}
-        />
+        >
+          {showFaceLabel && (
+            <span
+              className="absolute inset-0 flex items-center justify-center text-xs font-bold"
+              style={{ color: face === "U" ? "#000" : "#fff" }}
+            >
+              {face}
+            </span>
+          )}
+        </button>
       ))}
     </div>
   );

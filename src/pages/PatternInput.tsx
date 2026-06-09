@@ -4,6 +4,7 @@ import {
   Camera,
   Check,
   Image,
+  Palette,
   RotateCcw,
   Zap,
 } from "lucide-react";
@@ -29,11 +30,13 @@ import type { FacePhoto, FaceAssignment } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
 
 type Phase = "intro" | "capture" | "assign" | "review";
+type CubeVariant = "standard" | "pattern";
 
 export function PatternInput() {
   const { cubeSize, setAppStep } = useCubeStore();
 
   const [phase, setPhase] = useState<Phase>("intro");
+  const [cubeVariant, setCubeVariant] = useState<CubeVariant>("standard");
   const [photos, setPhotos] = useState<FacePhoto[]>([]);
   const [captureIdx, setCaptureIdx] = useState(0);
   const [assignments, setAssignments] = useState<(FaceAssignment | null)[]>(
@@ -76,12 +79,14 @@ export function PatternInput() {
           const rotated = applyRotation(raw, cubeSize, assignment.rotation);
           results[i] = rotated;
 
-          // Detect color for each sticker thumbnail
-          for (let j = 0; j < stickersPerFace; j++) {
-            try {
-              colors[i * stickersPerFace + j] = await classifyStickerColor(rotated[j]);
-            } catch {
-              // keep default color on failure
+          // Only auto-detect colors for standard cubes
+          if (cubeVariant === "standard") {
+            for (let j = 0; j < stickersPerFace; j++) {
+              try {
+                colors[i * stickersPerFace + j] = await classifyStickerColor(rotated[j]);
+              } catch {
+                // keep default color on failure
+              }
             }
           }
         } catch {
@@ -96,7 +101,7 @@ export function PatternInput() {
     }
     extractAll();
     return () => { cancelled = true; };
-  }, [phase, assignments, photos, cubeSize]);
+  }, [phase, assignments, photos, cubeSize, cubeVariant]);
 
   // ── Capture handlers ────────────────────────────────────────────────────
 
@@ -176,6 +181,7 @@ export function PatternInput() {
 
   const handleRestart = useCallback(() => {
     setPhase("intro");
+    setCubeVariant("standard");
     setPhotos([]);
     setCaptureIdx(0);
     setAssignments(Array(6).fill(null));
@@ -205,25 +211,65 @@ export function PatternInput() {
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold">图案识别</h3>
+            <h3 className="text-lg font-semibold">拍照识别</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              适用于面图案不同的魔方（图片魔方、纹理魔方等）。
-            </p>
-
-            <div className="text-left space-y-2 mt-4">
-              <p className="text-sm font-medium">操作步骤</p>
-              <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-                <li>依次拍摄魔方的 6 个面</li>
-                <li>点击照片选中，再点击展开图中对应的面位置</li>
-                <li>旋转照片，让相邻面的边缘图案对齐</li>
-                <li>确认后系统提取状态并求解</li>
-              </ol>
-            </div>
-
-            <p className="text-xs text-muted-foreground/70 mt-3">
-              提示：拍摄时尽量正对魔方面，让网格线与贴纸边缘对齐
+              拍摄魔方 6 个面，系统提取贴纸图案后求解。
             </p>
           </div>
+
+          <div className="grid grid-cols-2 gap-4 text-left">
+            <button
+              className={cn(
+                "p-4 rounded-xl border-2 transition-all cursor-pointer",
+                "hover:scale-[1.02] active:scale-[0.98]",
+                cubeVariant === "standard"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+              )}
+              onClick={() => setCubeVariant("standard")}
+            >
+              <Palette className="w-6 h-6 text-primary mb-2" />
+              <p className="text-sm font-semibold">标准配色</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                白、黄、红、橙、蓝、绿六色纯色贴纸
+              </p>
+            </button>
+
+            <button
+              className={cn(
+                "p-4 rounded-xl border-2 transition-all cursor-pointer",
+                "hover:scale-[1.02] active:scale-[0.98]",
+                cubeVariant === "pattern"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+              )}
+              onClick={() => setCubeVariant("pattern")}
+            >
+              <Image className="w-6 h-6 text-primary mb-2" />
+              <p className="text-sm font-semibold">图案魔方</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                图片魔方、纹理魔方等非纯色贴纸
+              </p>
+            </button>
+          </div>
+
+          <div className="text-left space-y-2">
+            <p className="text-sm font-medium">操作步骤</p>
+            <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+              <li>依次拍摄魔方的 6 个面</li>
+              <li>点击照片选中，再点击展开图中对应的面位置</li>
+              <li>旋转照片，让相邻面的边缘图案对齐</li>
+              <li>
+                {cubeVariant === "standard"
+                  ? "确认后系统自动检测颜色，修正错误即可求解"
+                  : "确认后查看贴纸图案，为每个贴纸分配所属面"}
+              </li>
+            </ol>
+          </div>
+
+          <p className="text-xs text-muted-foreground/70">
+            提示：拍摄时尽量正对魔方面，让网格线与贴纸边缘对齐
+          </p>
 
           <Button size="lg" className="gap-2" onClick={() => setPhase("capture")}>
             <Camera className="w-4 h-4" />
@@ -372,6 +418,8 @@ export function PatternInput() {
   }
 
   // phase === "review"
+  const isPattern = cubeVariant === "pattern";
+
   return (
     <CubePreviewLayout
       title={`${cubeSize}×${cubeSize} 提取结果`}
@@ -381,13 +429,18 @@ export function PatternInput() {
       stickerImages={stickerImages}
     >
       <div>
-        <p className="text-sm font-medium mb-2">修正颜色</p>
+        <p className="text-sm font-medium mb-2">
+          {isPattern ? "分配面标识" : "修正颜色"}
+        </p>
         <p className="text-xs text-muted-foreground mb-3">
-          先选颜色，再点击格子修正。参考左侧图片贴纸确认颜色。
+          {isPattern
+            ? "选择一个面标识，再点击贴纸分配。根据贴纸图案判断它属于哪个面。"
+            : "先选颜色，再点击格子修正。参考左侧图片贴纸确认颜色。"}
         </p>
         <ColorPalette
           selectedColor={selectedColor}
           onSelect={setSelectedColor}
+          showFaceLabel={isPattern}
         />
       </div>
 
@@ -404,6 +457,7 @@ export function PatternInput() {
               stickerColors={stickerColors}
               size={cubeSize}
               onStickerClick={handleStickerClick}
+              showColorIndicator={!isPattern}
             />
           </div>
         )}
@@ -429,11 +483,13 @@ function PatternStickerGrid({
   stickerColors,
   size,
   onStickerClick,
+  showColorIndicator = true,
 }: {
   stickers: (string[] | null)[];
   stickerColors: CubeState;
   size: number;
   onStickerClick: (faceIdx: number, pos: number) => void;
+  showColorIndicator?: boolean;
 }) {
   const cellStyle = size === 2
     ? { width: "min(12vw, 3rem)", height: "min(12vw, 3rem)" }
@@ -473,10 +529,12 @@ function PatternStickerGrid({
                     style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
                   />
                 )}
-                <span
-                  className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white/80"
-                  style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
-                />
+                {showColorIndicator && (
+                  <span
+                    className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white/80"
+                    style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
+                  />
+                )}
               </button>
             );
           })}
