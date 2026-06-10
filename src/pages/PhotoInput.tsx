@@ -62,7 +62,7 @@ export function PhotoInput() {
 
   const handleCapture = useCallback(
     (imageData: ImageData) => {
-      const colors = detectFaceColors(imageData, cubeSize);
+      const colors = detectFaceColors(imageData, cubeSize, true);
       const faceOffset = currentFaceIdx * stickersPerFace;
       const dataUrl = imageDataToDataUrl(imageData);
 

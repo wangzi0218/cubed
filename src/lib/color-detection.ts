@@ -101,21 +101,35 @@ export function classifyPixel(h: number, s: number, v: number): FaceColor {
  */
 export function detectFaceColors(
   imageData: ImageData,
-  gridSize: 2 | 3
+  gridSize: 2 | 3,
+  cropToSquare = false
 ): FaceColor[] {
   const { width, height, data } = imageData;
   const results: FaceColor[] = [];
 
-  const cellW = width / gridSize;
-  const cellH = height / gridSize;
+  // Center-crop to square to match camera guide overlay
+  let offsetX = 0;
+  let offsetY = 0;
+  let effectiveW = width;
+  let effectiveH = height;
+  if (cropToSquare) {
+    const squareSize = Math.min(width, height);
+    offsetX = Math.floor((width - squareSize) / 2);
+    offsetY = Math.floor((height - squareSize) / 2);
+    effectiveW = squareSize;
+    effectiveH = squareSize;
+  }
+
+  const cellW = effectiveW / gridSize;
+  const cellH = effectiveH / gridSize;
 
   // Sample center 40% of each cell to avoid borders
   const sampleMargin = 0.3; // 30% margin each side = 40% center
 
   for (let row = 0; row < gridSize; row++) {
     for (let col = 0; col < gridSize; col++) {
-      const cellLeft = col * cellW;
-      const cellTop = row * cellH;
+      const cellLeft = offsetX + col * cellW;
+      const cellTop = offsetY + row * cellH;
 
       const xStart = Math.floor(cellLeft + cellW * sampleMargin);
       const xEnd = Math.floor(cellLeft + cellW * (1 - sampleMargin));
