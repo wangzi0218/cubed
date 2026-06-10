@@ -17,12 +17,16 @@ import type { FaceColor, CubeState } from "@/types/cube";
 type Phase = "capture" | "review";
 
 const FACE_LABELS: Record<FaceColor, string> = {
-  U: "上面 (白)",
-  R: "右面 (红)",
-  F: "前面 (蓝)",
-  D: "下面 (黄)",
-  L: "左面 (橙)",
-  B: "后面 (绿)",
+  U: "上面",
+  R: "右面",
+  F: "前面",
+  D: "下面",
+  L: "左面",
+  B: "后面",
+};
+
+const FACE_CHINESE: Record<string, string> = {
+  U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
 };
 
 export function PhotoInput() {
@@ -222,7 +226,7 @@ export function PhotoInput() {
                   className="w-3 h-3 rounded-full border border-border/50"
                   style={{ backgroundColor: FACE_COLORS[face].hex }}
                 />
-                {face}: {count}格
+                {FACE_CHINESE[face] ?? face}: {count}格
               </span>
             );
           })}

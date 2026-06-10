@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { RefreshCw, Play } from "lucide-react";
 import { CubePreviewLayout } from "@/components/layout/CubePreviewLayout";
 import { ActionBar } from "@/components/layout/ActionBar";
+import { ErrorMessage } from "@/components/ui/error-message";
 import { useCubeStore } from "@/stores/cube-store";
 import { generateScramble } from "@/lib/scramble";
 import { applyMoves, initSolver, parseMoves, solveCube } from "@/lib/solver";
@@ -13,12 +14,15 @@ export function Scramble() {
     initSolver();
     return generateScramble(cubeSize);
   });
+  const [error, setError] = useState<string | null>(null);
 
   const handleRegenerate = useCallback(() => {
     setScramble(generateScramble(cubeSize));
+    setError(null);
   }, [cubeSize]);
 
   const handleStart = useCallback(() => {
+    setError(null);
     const solvedState = createSolvedState(cubeSize);
     const moves = parseMoves(scramble);
     const steps = applyMoves(solvedState, moves);
@@ -29,11 +33,11 @@ export function Scramble() {
     try {
       const result = solveCube(scrambledState, cubeSize);
       setSolution(result.solution, result.steps);
+      setAppStep("solution");
     } catch (e: unknown) {
-      console.error("Scramble solve error:", e);
-      setSolution("", []);
+      const msg = e instanceof Error ? e.message : "求解失败，请重试";
+      setError(msg);
     }
-    setAppStep("solution");
   }, [cubeSize, scramble, setAppStep, setSolution, setCurrentState, setStickerImages]);
 
   const handleBack = useCallback(() => {
@@ -65,6 +69,8 @@ export function Scramble() {
           按照此公式在已还原的魔方上执行打乱操作
         </p>
       </div>
+
+      {error && <ErrorMessage message={error} />}
 
       <ActionBar
         actions={[

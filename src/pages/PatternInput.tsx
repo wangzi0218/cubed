@@ -239,7 +239,7 @@ export function PatternInput() {
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold">拍照识别</h3>
+            <h3 className="text-lg font-semibold">图案识别</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
               拍摄魔方 6 个面，系统提取贴纸图案后求解。
             </p>

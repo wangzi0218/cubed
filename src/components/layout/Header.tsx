@@ -16,14 +16,22 @@ export function Header() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
           className="flex items-center gap-2 cursor-pointer"
-          onClick={reset}
+          onClick={() => {
+            if (appStep === "home" || window.confirm("返回首页将清除当前进度，确定继续？")) {
+              reset();
+            }
+          }}
         >
           <Box className="w-5 h-5" />
           <span className="font-semibold tracking-tight">Cubed</span>
         </button>
         <div className="flex items-center gap-2">
           {appStep !== "home" && (
-            <Button variant="ghost" size="sm" onClick={reset}>
+            <Button variant="ghost" size="sm" onClick={() => {
+              if (window.confirm("返回首页将清除当前进度，确定继续？")) {
+                reset();
+              }
+            }}>
               重新开始
             </Button>
           )}

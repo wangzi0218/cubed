@@ -50,7 +50,7 @@ export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetPr
             )}
             style={{ ...cellStyle, backgroundColor: hex }}
             onClick={() => handleCellClick(face, pos)}
-            title={`${face} - ${FACE_COLORS[color].label}`}
+            title={`${FACE_CHINESE[face] ?? face} - ${FACE_COLORS[color].label}`}
           />
         );
       }
@@ -70,18 +70,18 @@ export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetPr
     <div className="flex flex-col items-center gap-1 overflow-x-auto">
       {/* Row 1: U face */}
       <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
-        {renderFace("U", "Up")}
+        {renderFace("U", "上")}
       </div>
       {/* Row 2: L, F, R, B faces */}
       <div className="flex gap-px sm:gap-1">
-        {renderFace("L", "Left")}
-        {renderFace("F", "Front")}
-        {renderFace("R", "Right")}
-        {renderFace("B", "Back")}
+        {renderFace("L", "左")}
+        {renderFace("F", "前")}
+        {renderFace("R", "右")}
+        {renderFace("B", "后")}
       </div>
       {/* Row 3: D face */}
       <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
-        {renderFace("D", "Down")}
+        {renderFace("D", "下")}
       </div>
     </div>
   );
@@ -109,7 +109,7 @@ export function ColorPalette({ selectedColor, onSelect, showFaceLabel }: ColorPa
           )}
           style={{ backgroundColor: FACE_COLORS[face].hex }}
           onClick={() => onSelect(face)}
-          title={FACE_COLORS[face].label}
+          title={FACE_CHINESE[face] ?? face}
         >
           {showFaceLabel && (
             <span
