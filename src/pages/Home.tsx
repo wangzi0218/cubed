@@ -65,7 +65,7 @@ export function Home() {
         ))}
       </div>
 
-      <p className="text-xs text-muted-foreground/50 mt-8">v0.2.1</p>
+      <p className="text-xs text-muted-foreground/50 mt-8">v0.2.2</p>
     </div>
   );
 }
