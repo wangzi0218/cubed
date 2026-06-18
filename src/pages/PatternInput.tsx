@@ -15,10 +15,8 @@ import { ColorPalette } from "@/components/cube/CubeNet";
 import { extractFaceStickersFromDataUrl } from "@/lib/pattern-extraction";
 import type { FacePhoto } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
-import { CenterOrientationEditor } from "@/components/cube/CenterOrientationEditor";
 import {
   createInitialOrientations,
-  getCenterOrientations,
   setCenterOrientation,
 } from "@/lib/sticker-orientation";
 
@@ -52,7 +50,7 @@ export function PatternInput() {
   );
   const [extracting, setExtracting] = useState(false);
   const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
-  const [editMode, setEditMode] = useState<"face" | "orientation">("face");
+  const [selectedFace, setSelectedFace] = useState<FaceColor | null>(null);
   const [stickerColors, setStickerColors] = useState<CubeState>(
     () => createSolvedState(cubeSize)
   );
@@ -144,7 +142,7 @@ export function PatternInput() {
     (faceIdx: number, pos: number) => {
       const stickersPerFace = cubeSize * cubeSize;
       const idx = faceIdx * stickersPerFace + pos;
-      if (isPattern && editMode === "orientation") {
+      if (isPattern) {
         setStickerOrientations((prev) => {
           const next = [...prev];
           next[idx] = ((prev[idx] ?? 0) + 1) % 4;
@@ -158,7 +156,7 @@ export function PatternInput() {
         });
       }
     },
-    [cubeSize, selectedColor, isPattern, editMode]
+    [cubeSize, selectedColor, isPattern]
   );
 
   // ── 3D sticker click handler ───────────────────────────────────────────
@@ -167,6 +165,7 @@ export function PatternInput() {
       const size2 = cubeSize * cubeSize;
       const faceIdx = Math.floor(stickerIndex / size2);
       const pos = stickerIndex % size2;
+      setSelectedFace(FACE_ORDER[faceIdx]);
       handleStickerClick(faceIdx, pos);
     },
     [cubeSize, handleStickerClick]
@@ -319,12 +318,7 @@ export function PatternInput() {
   }
 
   // phase === "confirm"
-  const centerStickers = stickers.map((face) => {
-    if (!face) return "";
-    const centerPos = Math.floor(face.length / 2);
-    return face[centerPos] ?? "";
-  });
-  const centerOrientations = getCenterOrientations(stickerOrientations, cubeSize);
+  const selectedFaceIdx = selectedFace ? FACE_ORDER.indexOf(selectedFace) : -1;
 
   return (
     <CubePreviewLayout
@@ -335,62 +329,61 @@ export function PatternInput() {
       stickerImages={stickerImages}
       stickerOrientations={isPattern ? stickerOrientations : undefined}
       onStickerClick={handle3DStickerClick}
-      previewHint="点击贴纸可修正，拖拽旋转查看"
+      previewHint={isPattern ? "点击 3D 魔方上的面查看贴纸" : "对照实物，点击贴纸修正颜色"}
     >
-      {isPattern && (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={editMode === "face" ? "default" : "outline"}
-            onClick={() => setEditMode("face")}
-          >
-            标注面标识
-          </Button>
-          <Button
-            size="sm"
-            variant={editMode === "orientation" ? "default" : "outline"}
-            onClick={() => setEditMode("orientation")}
-          >
-            标注方向
-          </Button>
+      {isPattern ? (
+        <div>
+          <p className="text-sm font-medium mb-2">确认图案方向</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            点击下方按钮或 3D 魔方上的贴纸，逐面确认图案方向。
+          </p>
         </div>
-      )}
-
-      <div>
-        <p className="text-sm font-medium mb-2">
-          {isPattern
-            ? editMode === "face" ? "分配面标识" : "标注图案方向"
-            : "修正颜色"}
-        </p>
-        <p className="text-xs text-muted-foreground mb-3">
-          {isPattern
-            ? editMode === "face"
-              ? "选择一个面标识，再点击贴纸分配。"
-              : "点击贴纸旋转图案方向，每点一次转 90°。"
-            : "先选颜色，再点击格子修正。"}
-        </p>
-        {editMode === "face" && (
+      ) : (
+        <div>
+          <p className="text-sm font-medium mb-2">修正颜色</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            先选颜色，再点击格子修正。
+          </p>
           <ColorPalette
             selectedColor={selectedColor}
             onSelect={setSelectedColor}
-            showFaceLabel={isPattern}
           />
-        )}
-      </div>
-
-      {isPattern && !extracting && stickers.some((s) => s !== null) && (
-        <CenterOrientationEditor
-          centerStickers={centerStickers}
-          orientations={centerOrientations}
-          onOrientationChange={handleCenterOrientationChange}
-        />
+        </div>
       )}
+
+      {/* Face selection buttons */}
+      <div className="flex gap-2 flex-wrap">
+        {FACE_ORDER.map((face) => (
+          <Button
+            key={face}
+            size="sm"
+            variant={selectedFace === face ? "default" : "outline"}
+            onClick={() => setSelectedFace(selectedFace === face ? null : face)}
+          >
+            {FACE_CHINESE[face]}
+          </Button>
+        ))}
+      </div>
 
       <div>
         {extracting ? (
           <div className="flex flex-col items-center gap-3 py-8">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
+          </div>
+        ) : selectedFaceIdx >= 0 ? (
+          <div className="overflow-x-auto">
+            <SingleFaceGrid
+              stickers={stickers[selectedFaceIdx]}
+              faceIdx={selectedFaceIdx}
+              faceColor={selectedFace!}
+              stickerColors={stickerColors}
+              stickerOrientations={isPattern ? stickerOrientations : undefined}
+              size={cubeSize}
+              onStickerClick={handleStickerClick}
+              showColorIndicator={!isPattern}
+              showFaceLetter={isPattern}
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -400,7 +393,6 @@ export function PatternInput() {
               stickerOrientations={isPattern ? stickerOrientations : undefined}
               size={cubeSize}
               onStickerClick={handleStickerClick}
-              editMode={isPattern ? editMode : "face"}
               showColorIndicator={!isPattern}
               showFaceLetter={isPattern}
             />
@@ -532,6 +524,95 @@ function PatternStickerGrid({
       </div>
       <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
         {renderFace(3, "下")}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Display a single face's stickers in a larger grid for detailed inspection.
+ */
+function SingleFaceGrid({
+  stickers,
+  faceIdx,
+  faceColor,
+  stickerColors,
+  stickerOrientations,
+  size,
+  onStickerClick,
+  showColorIndicator = true,
+  showFaceLetter = false,
+}: {
+  stickers: string[] | null;
+  faceIdx: number;
+  faceColor: FaceColor;
+  stickerColors: CubeState;
+  stickerOrientations?: StickerOrientations;
+  size: number;
+  onStickerClick: (faceIdx: number, pos: number) => void;
+  showColorIndicator?: boolean;
+  showFaceLetter?: boolean;
+}) {
+  const stickersPerFace = size * size;
+  const cellSize = size === 2 ? "min(20vw, 5rem)" : "min(16vw, 4rem)";
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <p className="text-sm font-medium">{FACE_CHINESE[faceColor]}面贴纸</p>
+      <div
+        className="grid gap-1"
+        style={{ gridTemplateColumns: `repeat(${size}, ${cellSize})`, gridTemplateRows: `repeat(${size}, ${cellSize})` }}
+      >
+        {Array.from({ length: stickersPerFace }).map((_, i) => {
+          const colorIdx = faceIdx * stickersPerFace + i;
+          const color = stickerColors[colorIdx];
+          const stickerUrl = stickers?.[i];
+          const orientation = stickerOrientations?.[colorIdx] ?? 0;
+          return (
+            <button
+              key={i}
+              className="border border-border/30 rounded-md overflow-hidden cursor-pointer transition-all hover:scale-105 hover:border-primary/50 relative"
+              onClick={() => onStickerClick(faceIdx, i)}
+            >
+              {stickerUrl ? (
+                <img
+                  src={stickerUrl}
+                  alt={`贴纸 ${i}`}
+                  className="w-full h-full object-cover"
+                  style={{ transform: `rotate(${orientation * 90}deg)` }}
+                  draggable={false}
+                />
+              ) : (
+                <div
+                  className="w-full h-full"
+                  style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
+                />
+              )}
+              {showColorIndicator && (
+                <span
+                  className="absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 border-white"
+                  style={{ backgroundColor: FACE_COLORS[color]?.hex ?? "#888" }}
+                />
+              )}
+              {showFaceLetter && (
+                <span
+                  className="absolute top-1 right-1 text-[10px] font-bold leading-none px-1 py-0.5 rounded"
+                  style={{
+                    backgroundColor: FACE_COLORS[color]?.hex ?? "#888",
+                    color: color === "U" ? "#000" : "#fff",
+                  }}
+                >
+                  {FACE_CHINESE[color] ?? color}
+                </span>
+              )}
+              {orientation > 0 && (
+                <span className="absolute bottom-1 left-1 text-[9px] font-mono leading-none px-1 py-0.5 bg-black/70 text-white rounded">
+                  {ORIENTATION_LABELS[orientation]}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
