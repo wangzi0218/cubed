@@ -275,7 +275,7 @@ export function PatternInput() {
                   stickerColors={stickerColors}
                   stickerOrientations={isPattern ? stickerOrientations : undefined}
                   size={cubeSize}
-                  onStickerClick={isPattern ? handleStickerAction : handleStickerClick}
+                  onStickerClick={() => {}}
                   showColorIndicator={!isPattern}
                   showFaceLetter={isPattern}
                 />
@@ -285,7 +285,7 @@ export function PatternInput() {
                   stickerColors={stickerColors}
                   stickerOrientations={isPattern ? stickerOrientations : undefined}
                   size={cubeSize}
-                  onStickerClick={isPattern ? handleStickerAction : handleStickerClick}
+                  onStickerClick={() => {}}
                   showColorIndicator={!isPattern}
                   showFaceLetter={isPattern}
                 />
