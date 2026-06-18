@@ -9,10 +9,10 @@ import { useCubeStore } from "@/stores/cube-store";
 import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
 import type { FaceColor, CubeState, StickerOrientations } from "@/types/cube";
 import { useSolve } from "@/hooks/useSolve";
-import { imageDataToDataUrl, classifyStickerColor } from "@/lib/image-utils";
+import { imageDataToDataUrl } from "@/lib/image-utils";
 import { createSolvedState } from "@/lib/cube-state";
 import { ColorPalette } from "@/components/cube/CubeNet";
-import { extractFaceStickersFromDataUrl, applyRotation } from "@/lib/pattern-extraction";
+// import { extractFaceStickersFromDataUrl, applyRotation } from "@/lib/pattern-extraction";
 import type { FacePhoto } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
 import {
@@ -62,6 +62,11 @@ export function PatternInput() {
   const [stickerActionPos, setStickerActionPos] = useState<number | null>(null);
 
   const isPattern = cubeVariant === "pattern";
+
+  const stickerImages = useMemo(() => {
+    const flat = stickers.flat();
+    return flat.every((s) => s !== null) ? (flat as string[]) : undefined;
+  }, [stickers]);
 
   const { error, solve, clearError } = useSolve(
     stickerColors,
