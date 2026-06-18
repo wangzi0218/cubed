@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, Palette, RotateCcw, RotateCw, Zap } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
-import { CubePreviewLayout } from "@/components/layout/CubePreviewLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
@@ -165,18 +165,6 @@ export function PatternInput() {
       }
     },
     [cubeSize, selectedColor, isPattern]
-  );
-
-  // ── 3D sticker click handler ───────────────────────────────────────────
-  const handle3DStickerClick = useCallback(
-    (stickerIndex: number) => {
-      const size2 = cubeSize * cubeSize;
-      const faceIdx = Math.floor(stickerIndex / size2);
-      const pos = stickerIndex % size2;
-      setSelectedFace(FACE_ORDER[faceIdx]);
-      handleStickerClick(faceIdx, pos);
-    },
-    [cubeSize, handleStickerClick]
   );
 
   // ── Navigation ──────────────────────────────────────────────────────────
