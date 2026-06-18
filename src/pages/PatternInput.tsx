@@ -76,6 +76,7 @@ export function PatternInput() {
   // ── Auto-extract stickers when entering confirm phase ──────────────────
   const prevPhaseRef = useRef(phase);
   useEffect(() => {
+    // Only run once: when transitioning INTO confirm phase
     if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
       prevPhaseRef.current = phase;
       extractedRef.current = true;
