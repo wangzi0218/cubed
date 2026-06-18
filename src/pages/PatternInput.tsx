@@ -33,16 +33,16 @@ export function PatternInput() {
   const [captureIdx, setCaptureIdx] = useState(0);
   const [photos, setPhotos] = useState<(FacePhoto | null)[]>(() => Array(6).fill(null));
   const [photoRotations, setPhotoRotations] = useState<(0 | 90 | 180 | 270)[]>(() => Array(6).fill(0));
-  const [stickers, setStickers] = useState<(string[] | null)[]>(() => Array(6).fill(null));
-  const [stickerColors, setStickerColors] = useState<CubeState>(() => createSolvedState(cubeSize));
-  const [stickerOrientations, setStickerOrientations] = useState<StickerOrientations>(() => createInitialOrientations(cubeSize));
+  const [stickers] = useState<(string[] | null)[]>(() => Array(6).fill(null));
+  const [stickerColors] = useState<CubeState>(() => createSolvedState(cubeSize));
+  const [stickerOrientations] = useState<StickerOrientations>(() => createInitialOrientations(cubeSize));
 
   const isPattern = cubeVariant === "pattern";
   const stickerImages = useMemo(() => {
     const flat = stickers.flat();
     return flat.every((s) => s !== null) ? (flat as string[]) : undefined;
   }, [stickers]);
-  const { error, solve, clearError } = useSolve(stickerColors, cubeSize, stickerImages, isPattern ? stickerOrientations : undefined);
+  const _solve = useSolve(stickerColors, cubeSize, stickerImages, isPattern ? stickerOrientations : undefined);
 
   const capturedCount = photos.filter((p) => p !== null).length;
 
