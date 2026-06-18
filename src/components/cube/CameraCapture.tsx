@@ -115,12 +115,15 @@ export function CameraCapture({
           </div>
         )}
 
-        {/* Face label — hidden during preview */}
+        {/* Face label and mini cube net — hidden during preview */}
         {!capturedFrame && (
-          <div className="absolute top-4 left-0 right-0 text-center z-10 space-y-1">
+          <div className="absolute top-4 left-0 right-0 flex flex-col items-center gap-2 z-10">
+            {faceLetter && (
+              <MiniCubeNet currentFace={faceLetter} />
+            )}
             <span className="bg-black/60 text-white text-sm px-4 py-1.5 rounded-full">
               {faceLetter
-                ? `请拍摄${faceLabel}`
+                ? `第 ${faceIndex + 1}/6 · 请拍摄${faceLabel}`
                 : `拍摄第 ${faceIndex + 1} 面：${faceLabel}`}
             </span>
             {faceHint && (
@@ -133,7 +136,7 @@ export function CameraCapture({
 
         {/* Progress dots — hidden during preview */}
         {!capturedFrame && (
-          <div className="absolute top-14 left-0 right-0 flex justify-center gap-2 z-10">
+          <div className="absolute top-[140px] left-0 right-0 flex justify-center gap-2 z-10">
             {Array.from({ length: totalFaces }).map((_, i) => (
               <span
                 key={i}
@@ -311,6 +314,75 @@ function GridOverlay({ gridSize }: { gridSize: 2 | 3 }) {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+const FACE_CHINESE: Record<string, string> = {
+  U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
+};
+
+const FACE_COLOR_MAP: Record<string, string> = {
+  U: "#ffffff", R: "#b71234", F: "#0046ad",
+  D: "#ffd500", L: "#ff5800", B: "#009b48",
+};
+
+/**
+ * Mini cube net diagram showing which face to photograph.
+ * Layout:
+ *        [U]
+ *   [L]  [F]  [R]  [B]
+ *        [D]
+ */
+function MiniCubeNet({ currentFace }: { currentFace: string }) {
+  const blockSize = 24;
+  const gap = 2;
+
+  const faces = [
+    { face: "U", col: 1, row: 0 },
+    { face: "L", col: 0, row: 1 },
+    { face: "F", col: 1, row: 1 },
+    { face: "R", col: 2, row: 1 },
+    { face: "B", col: 3, row: 1 },
+    { face: "D", col: 1, row: 2 },
+  ];
+
+  return (
+    <div className="bg-black/50 rounded-lg p-2 inline-flex">
+      <div
+        className="relative"
+        style={{
+          width: 4 * blockSize + 3 * gap,
+          height: 3 * blockSize + 2 * gap,
+        }}
+      >
+        {faces.map(({ face, col, row }) => {
+          const isCurrent = face === currentFace;
+          return (
+            <div
+              key={face}
+              className="absolute flex items-center justify-center text-[9px] font-bold rounded"
+              style={{
+                left: col * (blockSize + gap),
+                top: row * (blockSize + gap),
+                width: blockSize,
+                height: blockSize,
+                backgroundColor: isCurrent
+                  ? FACE_COLOR_MAP[face]
+                  : "rgba(255,255,255,0.15)",
+                color: isCurrent
+                  ? (face === "U" ? "#000" : "#fff")
+                  : "rgba(255,255,255,0.5)",
+                border: isCurrent ? "2px solid white" : "1px solid rgba(255,255,255,0.2)",
+                transform: isCurrent ? "scale(1.1)" : "scale(1)",
+                transition: "all 0.2s",
+              }}
+            >
+              {FACE_CHINESE[face]}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
