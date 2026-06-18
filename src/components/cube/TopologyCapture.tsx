@@ -5,6 +5,10 @@ import { useCamera } from "@/hooks/useCamera";
 import { rgbToHsv, classifyPixel } from "@/lib/color-detection";
 import { FACE_COLORS, FACE_ORDER } from "@/types/cube";
 import type { FaceColor } from "@/types/cube";
+
+const FACE_CHINESE: Record<string, string> = {
+  U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
+};
 import { cn } from "@/lib/utils";
 
 interface TopologyCaptureProps {
@@ -160,8 +164,8 @@ export function TopologyCapture({
 
   const segmentLabels =
     type === "edge"
-      ? [faces[0], faces[1]]
-      : [faces[0], faces[1], faces[2]];
+      ? [faces[0], faces[1]].map((f) => FACE_CHINESE[f] ?? f)
+      : [faces[0], faces[1], faces[2]].map((f) => FACE_CHINESE[f] ?? f);
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto">
@@ -258,7 +262,7 @@ export function TopologyCapture({
       {/* Hint text */}
       {!captured && (
         <p className="text-xs text-muted-foreground text-center">
-          将{type === "edge" ? "棱" : "角"}的交界处置于框内，点击拍照
+          将{type === "edge" ? "两个面的相接处" : "三个面的交汇处"}对准框内，点击拍照
         </p>
       )}
 

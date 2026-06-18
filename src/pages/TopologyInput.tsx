@@ -173,7 +173,7 @@ export function TopologyInput() {
       <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
         {/* Header */}
         <PageHeader
-          title={`${cubeSize}×${cubeSize} 拓扑拼合`}
+          title={`${cubeSize}×${cubeSize} 魔方识别`}
           onBack={backToInputMethod}
         />
 
@@ -185,18 +185,20 @@ export function TopologyInput() {
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold">拓扑拼合法</h3>
+              <h3 className="text-lg font-semibold">拍照识别魔方</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                通过拍摄魔方{showEdges ? "棱和角" : "角"}的交界处，利用颜色的空间关系推断完整状态。
+                拍摄魔方{showEdges ? "边块（两个面之间的块）和角块（三个面交汇处的块）" : "角块（三个面交汇处的块）"}，
+                系统会根据颜色的空间关系自动识别完整状态。
               </p>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 {showEdges
-                  ? "需要拍摄 12 条棱和 8 个角的交界位置。"
-                  : "需要拍摄 8 个角的交界位置。"}
+                  ? "需要拍摄 12 个边块和 8 个角块，共 20 张照片。"
+                  : "需要拍摄 8 个角块，共 8 张照片。"}
               </p>
-              <p className="text-xs text-muted-foreground/70 mt-2">
-                此方法适用于任意颜色的魔方
-              </p>
+              <div className="text-xs text-muted-foreground/70 mt-2 space-y-1">
+                <p>拍摄时将魔方{showEdges ? "边块或角块" : "角块"}的相邻面对准框内即可。</p>
+                <p>此方法适用于任意颜色的魔方，包括图案魔方。</p>
+              </div>
             </div>
 
             <Button size="lg" className="gap-2" onClick={handleStart}>
@@ -286,7 +288,7 @@ export function TopologyInput() {
               </div>
 
               <div>
-                <p className="text-sm font-medium mb-3">推断结果</p>
+                <p className="text-sm font-medium mb-3">识别结果</p>
                 <div className="overflow-x-auto">
                   <CubeNet
                     state={currentState}
@@ -296,7 +298,7 @@ export function TopologyInput() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  推断完成后可在展开图上微调颜色
+                  识别完成后可在展开图上微调颜色
                 </p>
               </div>
 

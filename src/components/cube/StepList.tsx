@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { SolutionStep } from "@/types/cube";
 import { Check } from "lucide-react";
+import { getMoveChinese } from "@/lib/move-i18n";
 
 interface StepListProps {
   steps: SolutionStep[];
@@ -48,6 +49,9 @@ export function StepList({ steps, currentStepIndex, onStepClick }: StepListProps
             </span>
             <span className="text-sm font-mono font-semibold tracking-wider">
               {step.move.notation}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {getMoveChinese(step.move)}
             </span>
             {isDone && <Check className="w-4 h-4 ml-auto opacity-60" />}
           </div>

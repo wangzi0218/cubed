@@ -38,9 +38,11 @@ export function SolutionControls({
       const nextIndex = currentStepIndex + 1;
       const move = steps[nextIndex].move;
       onMoveStart?.(move);
-      onStepChange(nextIndex);
 
+      // Delay step change until animation completes so the 3D viewer
+      // shows the pre-move state during the rotation animation.
       timerRef.current = setTimeout(() => {
+        onStepChange(nextIndex);
         onMoveEnd?.();
       }, ANIMATION_DURATION);
     } else {

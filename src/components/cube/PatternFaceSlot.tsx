@@ -1,7 +1,10 @@
 import { RotateCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FaceColor } from "@/types/cube";
-import { FACE_COLORS } from "@/types/cube";
+
+const FACE_CHINESE: Record<string, string> = {
+  U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
+};
 
 interface PatternFaceSlotProps {
   face: FaceColor;
@@ -38,7 +41,7 @@ export function PatternFaceSlot({
           <>
             <img
               src={photoUrl}
-              alt={`${FACE_COLORS[face].label} face`}
+              alt={`${FACE_CHINESE[face] ?? face}面照片`}
               className="w-full h-full object-cover"
               style={{ transform: `rotate(${rotation}deg)` }}
               draggable={false}
@@ -68,12 +71,12 @@ export function PatternFaceSlot({
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center p-1">
-            {selected ? "点击分配" : "点击选择照片"}
+            {selected ? "点击分配" : "请先选择照片"}
           </div>
         )}
       </div>
       <span className="text-xs text-muted-foreground font-medium">
-        {FACE_COLORS[face].label}
+        {FACE_CHINESE[face] ?? face}
       </span>
     </div>
   );
@@ -105,7 +108,7 @@ export function PhotoThumb({ index, dataUrl, assigned, selected, onSelect }: Pho
     >
       <img
         src={dataUrl}
-        alt={`Photo ${index + 1}`}
+        alt={`照片 ${index + 1}`}
         className="w-full h-full object-cover"
         draggable={false}
       />

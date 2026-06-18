@@ -6,6 +6,7 @@ import { StepList } from "@/components/cube/StepList";
 import { SolutionControls } from "@/components/cube/SolutionControls";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useCubeStore } from "@/stores/cube-store";
+import { getMoveChinese } from "@/lib/move-i18n";
 import type { Move, StickerOrientations } from "@/types/cube";
 
 export function Solution() {
@@ -27,7 +28,7 @@ export function Solution() {
 
   const [animatingMove, setAnimatingMove] = useState<Move | null>(null);
   const [moveProgress, setMoveProgress] = useState(0);
-  const [showSteps, setShowSteps] = useState(false);
+  const [showSteps, setShowSteps] = useState(true);
   const animFrameRef = useRef<number>(0);
 
   const currentState =
@@ -47,7 +48,7 @@ export function Solution() {
     }
 
     const startTime = performance.now();
-    const duration = 500;
+    const duration = 600;
 
     function animate(now: number) {
       const elapsed = now - startTime;
@@ -56,10 +57,9 @@ export function Solution() {
 
       if (progress < 1) {
         animFrameRef.current = requestAnimationFrame(animate);
-      } else {
-        setAnimatingMove(null);
-        setMoveProgress(0);
       }
+      // Don't auto-clear animatingMove here. The SolutionControls
+      // setTimeout (600ms) handles the step change and calls onMoveEnd.
     }
 
     animFrameRef.current = requestAnimationFrame(animate);
@@ -142,13 +142,21 @@ export function Solution() {
                 onMoveStart={handleMoveStart}
                 onMoveEnd={handleMoveEnd}
               />
+              {currentStepIndex < 0 && (
+                <p className="text-center text-xs text-muted-foreground mt-2">
+                  点击播放按钮开始观看还原步骤
+                </p>
+              )}
             </div>
 
             {currentStepIndex >= 0 && currentStepIndex < solutionSteps.length && (
-              <div className="mt-3 text-center">
+              <div className="mt-3 text-center space-y-1">
                 <span className="text-2xl font-mono font-bold tracking-widest">
                   {solutionSteps[currentStepIndex].move.notation}
                 </span>
+                <p className="text-sm text-muted-foreground">
+                  {getMoveChinese(solutionSteps[currentStepIndex].move)}
+                </p>
               </div>
             )}
           </div>
@@ -177,7 +185,11 @@ export function Solution() {
         </div>
 
         <div className="flex justify-center mt-4">
-          <Button variant="outline" className="gap-2" onClick={reset}>
+          <Button variant="outline" className="gap-2" onClick={() => {
+            if (window.confirm("重新开始将清除当前进度，确定继续？")) {
+              reset();
+            }
+          }}>
             <RotateCcw className="w-4 h-4" />
             重新开始
           </Button>

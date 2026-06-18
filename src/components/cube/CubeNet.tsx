@@ -7,6 +7,10 @@ const FACE_CHINESE: Record<string, string> = {
   U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
 };
 
+const COLOR_CHINESE: Record<string, string> = {
+  U: "白色", D: "黄色", L: "橙色", R: "红色", F: "蓝色", B: "绿色",
+};
+
 interface CubeNetProps {
   state: CubeState;
   size: CubeSize;
@@ -50,7 +54,7 @@ export function CubeNet({ state, size, onStateChange, selectedColor }: CubeNetPr
             )}
             style={{ ...cellStyle, backgroundColor: hex }}
             onClick={() => handleCellClick(face, pos)}
-            title={`${FACE_CHINESE[face] ?? face} - ${FACE_COLORS[color].label}`}
+            title={`${FACE_CHINESE[face] ?? face} - ${COLOR_CHINESE[color] ?? color}`}
           />
         );
       }

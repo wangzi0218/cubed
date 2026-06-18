@@ -7,7 +7,7 @@ const clickableClass =
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { clickable?: boolean }
->(({ className, clickable, ...props }, ref) => (
+>(({ className, clickable, onClick, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
@@ -15,6 +15,15 @@ const Card = React.forwardRef<
       clickable && clickableClass,
       className
     )}
+    tabIndex={clickable ? 0 : undefined}
+    role={clickable ? "button" : undefined}
+    onKeyDown={clickable ? (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onClick?.(e as unknown as React.MouseEvent<HTMLDivElement>);
+      }
+    } : undefined}
+    onClick={clickable ? onClick : undefined}
     {...props}
   />
 ));

@@ -45,6 +45,15 @@ const FACE_HEX: Record<string, string> = {
   B: FACE_COLORS.B.hex,
 };
 
+const FACE_CHINESE: Record<string, string> = {
+  U: "上",
+  R: "右",
+  F: "前",
+  D: "下",
+  L: "左",
+  B: "后",
+};
+
 /**
  * Return the pixel position (x, y) of an edge intersection on the net.
  * An edge sits at the boundary between two faces.
@@ -133,7 +142,7 @@ function FaceBadge({ face }: { face: string }) {
       className="inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold text-white shadow-sm"
       style={{ backgroundColor: FACE_HEX[face] ?? "#888" }}
     >
-      {face}
+      {FACE_CHINESE[face] ?? face}
     </span>
   );
 }
@@ -175,7 +184,7 @@ export function TopologyGuide({
               opacity: 0.25,
             }}
           >
-            {face}
+            {FACE_CHINESE[face] ?? face}
           </div>
         ))}
 
@@ -206,8 +215,8 @@ export function TopologyGuide({
               }}
               title={
                 type === "edge"
-                  ? `${faces[0]}-${faces[1]}`
-                  : `${faces.join("-")}`
+                  ? `${FACE_CHINESE[faces[0]] ?? faces[0]}-${FACE_CHINESE[faces[1]] ?? faces[1]}`
+                  : faces.map((f) => FACE_CHINESE[f] ?? f).join("-")
               }
             >
               {isCompleted && (
@@ -229,7 +238,7 @@ export function TopologyGuide({
       {/* Progress text */}
       <div className="text-center space-y-2">
         <p className="text-sm text-muted-foreground">
-          {type === "edge" ? "棱块" : "角块"}{" "}
+          {type === "edge" ? "边块" : "角块"}{" "}
           <span className="font-medium text-foreground">
             {completedSteps.length}
           </span>{" "}
@@ -242,7 +251,7 @@ export function TopologyGuide({
           {currentFaces.map((f) => (
             <FaceBadge key={f} face={f} />
           ))}
-          <span>{type === "edge" ? "棱" : "角"}</span>
+          <span>{type === "edge" ? "相接处" : "交汇处"}</span>
         </div>
       </div>
     </div>

@@ -3,12 +3,12 @@ export type FaceColor = "U" | "D" | "L" | "R" | "F" | "B";
 
 // Face display info
 export const FACE_COLORS: Record<FaceColor, { label: string; hex: string }> = {
-  U: { label: "White", hex: "#ffffff" },
-  D: { label: "Yellow", hex: "#ffd500" },
-  L: { label: "Orange", hex: "#ff5800" },
-  R: { label: "Red", hex: "#b71234" },
-  F: { label: "Blue", hex: "#0046ad" },
-  B: { label: "Green", hex: "#009b48" },
+  U: { label: "白色", hex: "#ffffff" },
+  D: { label: "黄色", hex: "#ffd500" },
+  L: { label: "橙色", hex: "#ff5800" },
+  R: { label: "红色", hex: "#b71234" },
+  F: { label: "蓝色", hex: "#0046ad" },
+  B: { label: "绿色", hex: "#009b48" },
 };
 
 export const FACE_ORDER: FaceColor[] = ["U", "R", "F", "D", "L", "B"];

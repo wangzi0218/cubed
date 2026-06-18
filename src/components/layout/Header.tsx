@@ -35,7 +35,7 @@ export function Header() {
               重新开始
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+          <Button variant="ghost" size="icon" onClick={toggleTheme} title={resolvedTheme === "dark" ? "切换到浅色模式" : "切换到深色模式"}>
             {resolvedTheme === "dark" ? (
               <Sun className="h-4 w-4" />
             ) : (

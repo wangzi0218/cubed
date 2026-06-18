@@ -149,7 +149,7 @@ export function PhotoInput() {
                   title={photo ? `重拍第 ${i + 1} 面` : `第 ${i + 1} 面未拍摄`}
                 >
                   {photo ? (
-                    <img src={photo} alt={`Face ${i + 1}`} className="w-full h-full object-cover" />
+                    <img src={photo} alt={`第 ${i + 1} 面`} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
                       {i + 1}
@@ -202,7 +202,7 @@ export function PhotoInput() {
                     className="w-3 h-3 rounded-full border border-border/50"
                     style={{ backgroundColor: FACE_COLORS[detectedColor]?.hex ?? "#000" }}
                   />
-                  <span className="text-xs text-muted-foreground">{face}</span>
+                  <span className="text-xs text-muted-foreground">{FACE_CHINESE[face] ?? face}</span>
                 </div>
               </button>
             );

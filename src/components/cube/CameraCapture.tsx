@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Camera, RefreshCw, AlertCircle } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Camera, RefreshCw, AlertCircle, Check, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCamera } from "@/hooks/useCamera";
 import { useCubeStore } from "@/stores/cube-store";
@@ -19,10 +19,12 @@ export function CameraCapture({
   totalFaces,
   onSwitchCamera,
 }: CameraCaptureProps) {
-  const { videoRef, stream, error, isReady, captureFrame, switchCamera } =
+  const { videoRef, stream, error, isReady, captureFrame, switchCamera, retry } =
     useCamera();
   const cubeSize = useCubeStore((s) => s.cubeSize);
   const [flashing, setFlashing] = useState(false);
+  const [capturedFrame, setCapturedFrame] = useState<ImageData | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Attach stream to video element
   useEffect(() => {
@@ -32,14 +34,38 @@ export function CameraCapture({
     }
   }, [stream, videoRef]);
 
+  // Render captured frame to preview canvas
+  useEffect(() => {
+    if (capturedFrame && previewCanvasRef.current) {
+      const canvas = previewCanvasRef.current;
+      canvas.width = capturedFrame.width;
+      canvas.height = capturedFrame.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.putImageData(capturedFrame, 0, 0);
+      }
+    }
+  }, [capturedFrame]);
+
   const handleCapture = useCallback(() => {
     const frame = captureFrame();
     if (!frame) return;
 
     setFlashing(true);
-    onCapture(frame);
+    setCapturedFrame(frame);
     setTimeout(() => setFlashing(false), 300);
-  }, [captureFrame, onCapture]);
+  }, [captureFrame]);
+
+  const handleConfirm = useCallback(() => {
+    if (capturedFrame) {
+      onCapture(capturedFrame);
+      setCapturedFrame(null);
+    }
+  }, [capturedFrame, onCapture]);
+
+  const handleRetake = useCallback(() => {
+    setCapturedFrame(null);
+  }, []);
 
   const handleSwitch = useCallback(() => {
     switchCamera();
@@ -51,7 +77,7 @@ export function CameraCapture({
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center gap-4">
         <AlertCircle className="w-12 h-12 text-muted-foreground" />
         <p className="text-muted-foreground max-w-sm">{error}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
+        <Button variant="outline" onClick={retry}>
           重新尝试
         </Button>
       </div>
@@ -64,39 +90,69 @@ export function CameraCapture({
       <div className="flex-1 relative overflow-hidden">
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full object-cover ${capturedFrame ? "hidden" : ""}`}
           autoPlay
           playsInline
           muted
         />
 
-        {/* Face label */}
-        <div className="absolute top-4 left-0 right-0 text-center z-10">
-          <span className="bg-black/60 text-white text-sm px-4 py-1.5 rounded-full">
-            拍摄第 {faceIndex + 1} 面：{faceLabel}
-          </span>
-        </div>
+        {/* Captured preview */}
+        {capturedFrame && (
+          <canvas
+            ref={previewCanvasRef}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
 
-        {/* Progress dots */}
-        <div className="absolute top-14 left-0 right-0 flex justify-center gap-2 z-10">
-          {Array.from({ length: totalFaces }).map((_, i) => (
-            <span
-              key={i}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                i === faceIndex
-                  ? "bg-white"
-                  : i < faceIndex
-                    ? "bg-white/60"
-                    : "bg-white/25"
-              }`}
-            />
-          ))}
-        </div>
+        {/* Loading state */}
+        {!capturedFrame && !isReady && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <p className="text-white/70 text-sm">正在启动摄像头...</p>
+          </div>
+        )}
 
-        {/* Grid overlay */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <GridOverlay gridSize={cubeSize} />
-        </div>
+        {/* Face label — hidden during preview */}
+        {!capturedFrame && (
+          <div className="absolute top-4 left-0 right-0 text-center z-10">
+            <span className="bg-black/60 text-white text-sm px-4 py-1.5 rounded-full">
+              拍摄第 {faceIndex + 1} 面：{faceLabel}
+            </span>
+          </div>
+        )}
+
+        {/* Progress dots — hidden during preview */}
+        {!capturedFrame && (
+          <div className="absolute top-14 left-0 right-0 flex justify-center gap-2 z-10">
+            {Array.from({ length: totalFaces }).map((_, i) => (
+              <span
+                key={i}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  i === faceIndex
+                    ? "bg-white"
+                    : i < faceIndex
+                      ? "bg-white/60"
+                      : "bg-white/25"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Grid overlay — hidden during preview */}
+        {!capturedFrame && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <GridOverlay gridSize={cubeSize} />
+          </div>
+        )}
+
+        {/* Preview label */}
+        {capturedFrame && (
+          <div className="absolute top-4 left-0 right-0 text-center z-10">
+            <span className="bg-black/60 text-white text-sm px-4 py-1.5 rounded-full">
+              拍摄预览
+            </span>
+          </div>
+        )}
 
         {/* Flash effect */}
         {flashing && (
@@ -111,26 +167,49 @@ export function CameraCapture({
 
       {/* Controls */}
       <div className="bg-black/80 px-6 py-5 flex items-center justify-center gap-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-white hover:text-white/80 hover:bg-white/10"
-          onClick={handleSwitch}
-          title="切换摄像头"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </Button>
+        {!capturedFrame ? (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:text-white/80 hover:bg-white/10"
+              onClick={handleSwitch}
+              title="切换摄像头"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </Button>
 
-        <button
-          className="w-16 h-16 rounded-full bg-white flex items-center justify-center border-4 border-white/30 hover:scale-105 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
-          onClick={handleCapture}
-          disabled={!isReady}
-          title="拍摄"
-        >
-          <Camera className="w-7 h-7 text-black" />
-        </button>
+            <button
+              className="w-16 h-16 rounded-full bg-white flex items-center justify-center border-4 border-white/30 hover:scale-105 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleCapture}
+              disabled={!isReady}
+              title="拍摄"
+            >
+              <Camera className="w-7 h-7 text-black" />
+            </button>
 
-        <div className="w-10" /> {/* Spacer for symmetry */}
+            <div className="w-10" />
+          </>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              className="text-white hover:text-white/80 hover:bg-white/10 gap-2"
+              onClick={handleRetake}
+            >
+              <RotateCcw className="w-4 h-4" />
+              重新拍摄
+            </Button>
+
+            <Button
+              className="gap-2"
+              onClick={handleConfirm}
+            >
+              <Check className="w-4 h-4" />
+              确认使用
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

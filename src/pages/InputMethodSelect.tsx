@@ -15,28 +15,24 @@ const methods = [
     icon: Grid3x3,
     title: "手动输入",
     description: "在展开图上逐个选择颜色，最可靠的方式",
-    available: true,
   },
   {
     id: "color" as InputMethod,
     icon: Camera,
     title: "拍照识别",
     description: "拍摄 6 个面，自动识别颜色",
-    available: true,
   },
   {
     id: "pattern" as InputMethod,
     icon: Image,
     title: "图案识别",
     description: "拍摄 6 面，拖拽分配到面位置，适用于图片/纹理魔方",
-    available: true,
   },
   {
     id: "topology" as InputMethod,
     icon: Palette,
-    title: "拓扑拼合",
-    description: "拍摄棱角交界，通过空间关系推断状态，适用于任意魔方",
-    available: true,
+    title: "魔方识别",
+    description: "拍摄边块和角块，通过空间关系自动识别状态，适用于任意魔方",
   },
 ];
 
@@ -68,15 +64,10 @@ export function InputMethodSelect() {
           {methods.map((m) => (
             <Card
               key={m.id}
-              className={
-                m.available ? undefined : "opacity-50 cursor-not-allowed"
-              }
-              clickable={m.available}
+              clickable
               onClick={() => {
-                if (m.available) {
-                  setInputMethod(m.id);
-                  setAppStep("input");
-                }
+                setInputMethod(m.id);
+                setAppStep("input");
               }}
             >
               <CardHeader className="flex flex-row items-center gap-4">
@@ -85,11 +76,6 @@ export function InputMethodSelect() {
                   <CardTitle className="text-base">{m.title}</CardTitle>
                   <CardDescription>{m.description}</CardDescription>
                 </div>
-                {!m.available && (
-                  <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                    即将推出
-                  </span>
-                )}
               </CardHeader>
             </Card>
           ))}

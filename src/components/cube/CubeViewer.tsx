@@ -315,11 +315,19 @@ function AnimatedFace({ move, state, size, stickerImages, stickerOrientations, p
   }, [move.face, half]);
 
   const angle = useMemo(() => {
+    // Singmaster "clockwise" is viewed from outside the face.
+    // Three.js positive rotation follows right-hand rule around the axis.
+    // For faces with positive outward normal (R=+x, U=+y, F=+z),
+    // CW from outside = negative rotation, so we negate.
+    // For faces with negative outward normal (L=-x, D=-y, B=-z),
+    // CW from outside = positive rotation, so no change.
+    const positiveNormal = move.face === "R" || move.face === "U" || move.face === "F";
+    const sign = positiveNormal ? -1 : 1;
     let base = Math.PI / 2;
     if (move.direction === "2") base = Math.PI;
     if (move.direction === "'") base = -Math.PI / 2;
-    return base * progress;
-  }, [move.direction, progress]);
+    return base * progress * sign;
+  }, [move.face, move.direction, progress]);
 
   const positions: [number, number, number][] = [];
   for (let ix = 0; ix < size; ix++) {

@@ -7,6 +7,7 @@ interface UseCameraReturn {
   isReady: boolean;
   captureFrame: () => ImageData | null;
   switchCamera: () => void;
+  retry: () => void;
 }
 
 export function useCamera(): UseCameraReturn {
@@ -17,6 +18,7 @@ export function useCamera(): UseCameraReturn {
   const [facingMode, setFacingMode] = useState<"environment" | "user">(
     "environment"
   );
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -72,7 +74,7 @@ export function useCamera(): UseCameraReturn {
       setStream(null);
       setIsReady(false);
     };
-  }, [facingMode]);
+  }, [facingMode, retryCount]);
 
   const captureFrame = useCallback((): ImageData | null => {
     const video = videoRef.current;
@@ -96,5 +98,9 @@ export function useCamera(): UseCameraReturn {
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   }, []);
 
-  return { videoRef, stream, error, isReady, captureFrame, switchCamera };
+  const retry = useCallback(() => {
+    setRetryCount((c) => c + 1);
+  }, []);
+
+  return { videoRef, stream, error, isReady, captureFrame, switchCamera, retry };
 }
