@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, Palette, RotateCcw, RotateCw, Zap } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
@@ -61,9 +61,10 @@ export function PatternInput() {
 
   const isPattern = cubeVariant === "pattern";
 
-  const stickerImages = stickers.flat().every((s) => s !== null)
-    ? (stickers.flat() as string[])
-    : undefined;
+  const stickerImages = useMemo(() => {
+    const flat = stickers.flat();
+    return flat.every((s) => s !== null) ? (flat as string[]) : undefined;
+  }, [stickers]);
 
   const { error, solve, clearError } = useSolve(
     stickerColors,
@@ -73,46 +74,49 @@ export function PatternInput() {
   );
 
   // ── Auto-extract stickers when entering confirm phase ──────────────────
+  const prevPhaseRef = useRef(phase);
   useEffect(() => {
-    if (phase !== "confirm" || extractedRef.current) return;
+    if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
+      prevPhaseRef.current = phase;
+      extractedRef.current = true;
 
-    let cancelled = false;
-    extractedRef.current = true;
-    setExtracting(true);
+      let cancelled = false;
+      setExtracting(true);
 
-    async function extractAll() {
-      const stickersPerFace = cubeSize * cubeSize;
-      const results: (string[] | null)[] = Array(6).fill(null);
-      const colors: FaceColor[] = createSolvedState(cubeSize);
+      async function extractAll() {
+        const stickersPerFace = cubeSize * cubeSize;
+        const results: (string[] | null)[] = Array(6).fill(null);
+        const colors: FaceColor[] = createSolvedState(cubeSize);
 
-      for (let i = 0; i < 6; i++) {
-        const photo = photos[i];
-        if (!photo) continue;
-        try {
-          const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true);
-          results[i] = applyRotation(raw, cubeSize, photoRotations[i]);
+        for (let i = 0; i < 6; i++) {
+          const photo = photos[i];
+          if (!photo) continue;
+          try {
+            const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true);
+            results[i] = applyRotation(raw, cubeSize, photoRotations[i]);
 
-          if (cubeVariant === "standard") {
-            for (let j = 0; j < stickersPerFace; j++) {
-              try {
-                colors[i * stickersPerFace + j] = await classifyStickerColor(raw[j]);
-              } catch {
-                // keep default color on failure
+            if (cubeVariant === "standard") {
+              for (let j = 0; j < stickersPerFace; j++) {
+                try {
+                  colors[i * stickersPerFace + j] = await classifyStickerColor(raw[j]);
+                } catch {
+                  // keep default color on failure
+                }
               }
             }
+          } catch {
+            results[i] = null;
           }
-        } catch {
-          results[i] = null;
+        }
+        if (!cancelled) {
+          setStickers(results);
+          setStickerColors(colors);
+          setExtracting(false);
         }
       }
-      if (!cancelled) {
-        setStickers(results);
-        setStickerColors(colors);
-        setExtracting(false);
-      }
+      extractAll();
+      return () => { cancelled = true; };
     }
-    extractAll();
-    return () => { cancelled = true; };
   }, [phase, photos, photoRotations, cubeSize, cubeVariant]);
 
   // ── Capture handler ────────────────────────────────────────────────────
