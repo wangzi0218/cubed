@@ -336,95 +336,193 @@ export function PatternInput() {
   // phase === "confirm"
   const selectedFaceIdx = selectedFace ? FACE_ORDER.indexOf(selectedFace) : -1;
 
+  // Sticker action panel state
+  const [stickerAction, setStickerAction] = useState<{ faceIdx: number; pos: number } | null>(null);
+
+  const handleStickerAction = useCallback(
+    (faceIdx: number, pos: number) => {
+      setStickerAction({ faceIdx, pos });
+    },
+    []
+  );
+
+  const handleMoveSticker = useCallback(
+    (targetFaceIdx: number) => {
+      if (!stickerAction) return;
+      const { faceIdx: srcFace, pos: srcPos } = stickerAction;
+      if (srcFace === targetFaceIdx) { setStickerAction(null); return; }
+
+      const spf = cubeSize * cubeSize;
+      const srcIdx = srcFace * spf + srcPos;
+      const tgtIdx = targetFaceIdx * spf + srcPos; // same position on target face
+
+      // Swap sticker images
+      setStickers((prev) => {
+        const next = [...prev];
+        const srcStickers = [...(next[srcFace] ?? [])];
+        const tgtStickers = [...(next[targetFaceIdx] ?? [])];
+        const tmp = srcStickers[srcPos];
+        srcStickers[srcPos] = tgtStickers[srcPos];
+        tgtStickers[srcPos] = tmp;
+        next[srcFace] = srcStickers;
+        next[targetFaceIdx] = tgtStickers;
+        return next;
+      });
+
+      // Swap colors
+      setStickerColors((prev) => {
+        const next = [...prev];
+        const tmp = next[srcIdx];
+        next[srcIdx] = next[tgtIdx];
+        next[tgtIdx] = tmp;
+        return next;
+      });
+
+      // Swap orientations
+      setStickerOrientations((prev) => {
+        const next = [...prev];
+        const tmp = next[srcIdx];
+        next[srcIdx] = next[tgtIdx];
+        next[tgtIdx] = tmp;
+        return next;
+      });
+
+      setStickerAction(null);
+    },
+    [stickerAction, cubeSize]
+  );
+
+  const handleRotateSticker = useCallback(
+    () => {
+      if (!stickerAction) return;
+      handleStickerClick(stickerAction.faceIdx, stickerAction.pos);
+      setStickerAction(null);
+    },
+    [stickerAction, handleStickerClick]
+  );
+
   return (
-    <CubePreviewLayout
-      title={`${cubeSize}×${cubeSize} 确认状态`}
-      onBack={handleBackToCapture}
-      state={stickerColors}
-      size={cubeSize}
-      stickerImages={stickerImages}
-      stickerOrientations={isPattern ? stickerOrientations : undefined}
-      onStickerClick={handle3DStickerClick}
-      previewHint={isPattern ? "点击 3D 魔方上的面查看贴纸" : "对照实物，点击贴纸修正颜色"}
-    >
-      {isPattern ? (
-        <div>
-          <p className="text-sm font-medium mb-2">确认图案方向</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            点击下方按钮或 3D 魔方上的贴纸，逐面确认图案方向。
-          </p>
-        </div>
-      ) : (
-        <div>
-          <p className="text-sm font-medium mb-2">修正颜色</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            先选颜色，再点击格子修正。
-          </p>
-          <ColorPalette
-            selectedColor={selectedColor}
-            onSelect={setSelectedColor}
+    <div className="flex-1 flex flex-col">
+      <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
+        <PageHeader
+          title={`${cubeSize}×${cubeSize} 确认状态`}
+          onBack={handleBackToCapture}
+        />
+
+        <div className="flex-1 flex flex-col gap-6">
+          {/* Instructions */}
+          {isPattern ? (
+            <div>
+              <p className="text-sm font-medium mb-1">确认图案</p>
+              <p className="text-xs text-muted-foreground">
+                对照实物魔方，检查每个面的贴纸是否正确。点击贴纸可以旋转方向或移动到其他面。
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-medium mb-1">修正颜色</p>
+              <p className="text-xs text-muted-foreground">
+                先选颜色，再点击格子修正。
+              </p>
+              <ColorPalette selectedColor={selectedColor} onSelect={setSelectedColor} />
+            </div>
+          )}
+
+          {/* 2D Grid - main editing area */}
+          <div className="flex-1">
+            {extracting ? (
+              <div className="flex flex-col items-center gap-3 py-8">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
+              </div>
+            ) : selectedFaceIdx >= 0 ? (
+              <div className="overflow-x-auto">
+                <SingleFaceGrid
+                  stickers={stickers[selectedFaceIdx]}
+                  faceIdx={selectedFaceIdx}
+                  faceColor={selectedFace!}
+                  stickerColors={stickerColors}
+                  stickerOrientations={isPattern ? stickerOrientations : undefined}
+                  size={cubeSize}
+                  onStickerClick={isPattern ? handleStickerAction : handleStickerClick}
+                  showColorIndicator={!isPattern}
+                  showFaceLetter={isPattern}
+                />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <PatternStickerGrid
+                  stickers={stickers}
+                  stickerColors={stickerColors}
+                  stickerOrientations={isPattern ? stickerOrientations : undefined}
+                  size={cubeSize}
+                  onStickerClick={isPattern ? handleStickerAction : handleStickerClick}
+                  showColorIndicator={!isPattern}
+                  showFaceLetter={isPattern}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Face selection buttons */}
+          <div className="flex gap-2 flex-wrap justify-center">
+            {FACE_ORDER.map((face) => (
+              <Button
+                key={face}
+                size="sm"
+                variant={selectedFace === face ? "default" : "outline"}
+                onClick={() => setSelectedFace(selectedFace === face ? null : face)}
+              >
+                {FACE_CHINESE[face]}
+              </Button>
+            ))}
+          </div>
+
+          {/* Sticker action popup */}
+          {stickerAction && isPattern && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setStickerAction(null)}>
+              <div className="bg-card rounded-xl p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+                <p className="text-sm font-medium text-center">贴纸操作</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  {FACE_CHINESE[FACE_ORDER[stickerAction.faceIdx]]}面 第 {stickerAction.pos + 1} 格
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button variant="outline" onClick={handleRotateSticker}>
+                    旋转方向（90°）
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">移动到：</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {FACE_ORDER.map((face, idx) => (
+                      <Button
+                        key={face}
+                        variant="outline"
+                        size="sm"
+                        disabled={idx === stickerAction.faceIdx}
+                        onClick={() => handleMoveSticker(idx)}
+                      >
+                        {FACE_CHINESE[face]}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <Button variant="ghost" className="w-full" onClick={() => setStickerAction(null)}>
+                  取消
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {error && <ErrorMessage message={error} />}
+
+          <ActionBar
+            actions={[
+              { label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
+              { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting },
+            ]}
           />
         </div>
-      )}
-
-      {/* Face selection buttons */}
-      <div className="flex gap-2 flex-wrap">
-        {FACE_ORDER.map((face) => (
-          <Button
-            key={face}
-            size="sm"
-            variant={selectedFace === face ? "default" : "outline"}
-            onClick={() => setSelectedFace(selectedFace === face ? null : face)}
-          >
-            {FACE_CHINESE[face]}
-          </Button>
-        ))}
       </div>
-
-      <div>
-        {extracting ? (
-          <div className="flex flex-col items-center gap-3 py-8">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
-          </div>
-        ) : selectedFaceIdx >= 0 ? (
-          <div className="overflow-x-auto">
-            <SingleFaceGrid
-              stickers={stickers[selectedFaceIdx]}
-              faceIdx={selectedFaceIdx}
-              faceColor={selectedFace!}
-              stickerColors={stickerColors}
-              stickerOrientations={isPattern ? stickerOrientations : undefined}
-              size={cubeSize}
-              onStickerClick={handleStickerClick}
-              showColorIndicator={!isPattern}
-              showFaceLetter={isPattern}
-            />
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <PatternStickerGrid
-              stickers={stickers}
-              stickerColors={stickerColors}
-              stickerOrientations={isPattern ? stickerOrientations : undefined}
-              size={cubeSize}
-              onStickerClick={handleStickerClick}
-              showColorIndicator={!isPattern}
-              showFaceLetter={isPattern}
-            />
-          </div>
-        )}
-      </div>
-
-      {error && <ErrorMessage message={error} />}
-
-      <ActionBar
-        actions={[
-          { label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
-          { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting },
-        ]}
-      />
-    </CubePreviewLayout>
+    </div>
   );
 }
 
