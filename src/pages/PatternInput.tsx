@@ -51,45 +51,13 @@ export function PatternInput() {
   }, [stickers]);
   const { error, solve } = useSolve(stickerColors, cubeSize, stickerImages, isPattern ? stickerOrientations : undefined);
 
-  // Extraction effect
-  const prevPhaseRef = useRef(phase);
+  // Extraction disabled for testing
   useEffect(() => {
-    if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
-      prevPhaseRef.current = phase;
+    if (phase === "confirm" && !extractedRef.current) {
       extractedRef.current = true;
-      let cancelled = false;
-      setExtracting(true);
-
-      async function extractAll() {
-        const { extractFaceStickersFromDataUrl, applyRotation } = await import("@/lib/pattern-extraction");
-        const { classifyStickerColor } = await import("@/lib/image-utils");
-        const stickersPerFace = cubeSize * cubeSize;
-        const results: (string[] | null)[] = Array(6).fill(null);
-        const colors: FaceColor[] = createSolvedState(cubeSize);
-
-        for (let i = 0; i < 6; i++) {
-          const photo = photos[i];
-          if (!photo) continue;
-          try {
-            const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true, window.innerWidth, window.innerHeight);
-            results[i] = applyRotation(raw, cubeSize, photoRotations[i]);
-            if (cubeVariant === "standard") {
-              for (let j = 0; j < stickersPerFace; j++) {
-                try { colors[i * stickersPerFace + j] = await classifyStickerColor(raw[j]); } catch {}
-              }
-            }
-          } catch { results[i] = null; }
-        }
-        if (!cancelled) {
-          setStickers(results);
-          setStickerColors(colors);
-          setExtracting(false);
-        }
-      }
-      extractAll();
-      return () => { cancelled = true; };
+      setExtracting(false);
     }
-  }, [phase, photos, photoRotations, cubeSize, cubeVariant]);
+  }, [phase]);
 
   const capturedCount = photos.filter((p) => p !== null).length;
 
