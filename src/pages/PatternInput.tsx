@@ -1,9 +1,8 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Image, Palette, RotateCcw, Zap } from "lucide-react";
+import { Camera, Image, Palette, RotateCcw } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
 import { FACE_ORDER } from "@/types/cube";
 import type { FacePhoto } from "@/lib/pattern-extraction";
@@ -31,7 +30,6 @@ export function PatternInput() {
   const [photos, setPhotos] = useState<(FacePhoto | null)[]>(() => Array(6).fill(null));
   const [photoRotations, setPhotoRotations] = useState<(0 | 90 | 180 | 270)[]>(() => Array(6).fill(0));
 
-  const isPattern = cubeVariant === "pattern";
   const capturedCount = photos.filter((p) => p !== null).length;
 
   const handleCapture = useCallback(
