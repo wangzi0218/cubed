@@ -44,7 +44,7 @@ export function applyRotation<T>(grid: T[], size: number, degrees: number): T[] 
 /**
  * Extract sticker thumbnails from a captured face image.
  * Divides the image into a size×size grid and returns the center region of each cell as a data URL.
- * When cropToGuide is true, first center-crops the image to a square to match the camera guide overlay.
+ * When cropToGuide is true, first crops to the guide overlay region (middle 55% of the smaller dimension).
  */
 export function extractFaceStickers(
   imageData: ImageData,
@@ -60,13 +60,15 @@ export function extractFaceStickers(
   const srcCtx = srcCanvas.getContext("2d")!;
   srcCtx.putImageData(imageData, 0, 0);
 
-  // Crop to centered square matching the camera guide overlay
+  // Crop to the guide overlay region (matches GridOverlay's 55% vmin)
   let drawW = width;
   let drawH = height;
   let offsetX = 0;
   let offsetY = 0;
   if (cropToGuide) {
-    const squareSize = Math.min(width, height);
+    const guidePercent = 0.55;
+    const minDim = Math.min(width, height);
+    const squareSize = Math.floor(minDim * guidePercent);
     offsetX = Math.floor((width - squareSize) / 2);
     offsetY = Math.floor((height - squareSize) / 2);
     drawW = squareSize;
@@ -85,8 +87,8 @@ export function extractFaceStickers(
 
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
-      // Sample center 60% of each cell
-      const margin = 0.2;
+      // Sample center 80% of each cell (reduced margin from 20% to 10%)
+      const margin = 0.1;
       const sx = offsetX + Math.floor(c * cellW + cellW * margin);
       const sy = offsetY + Math.floor(r * cellH + cellH * margin);
       const sw = Math.floor(cellW * (1 - 2 * margin));
