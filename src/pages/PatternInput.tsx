@@ -174,11 +174,102 @@ export function PatternInput() {
         <PageHeader title={`${cubeSize}×${cubeSize} 确认状态`} onBack={handleBackToCapture} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <p className="text-lg font-medium">已拍摄 {capturedCount} 张照片</p>
-          <p className="text-sm text-muted-foreground">确认页面（极简版）</p>
+          <p className="text-sm text-muted-foreground">展开图测试版</p>
+          <div className="overflow-x-auto">
+            <PatternStickerGrid
+              stickers={stickers}
+              stickerColors={stickerColors}
+              size={cubeSize}
+              onStickerClick={() => {}}
+              showColorIndicator={!isPattern}
+              showFaceLetter={isPattern}
+            />
+          </div>
           <Button onClick={handleBackToCapture} variant="outline" className="gap-2">
             <RotateCcw className="w-4 h-4" />重新拍摄
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const FACE_COLORS_HEX: Record<string, string> = {
+  U: "#ffffff", R: "#b71234", F: "#0046ad",
+  D: "#ffd500", L: "#ff5800", B: "#009b48",
+};
+
+function PatternStickerGrid({
+  stickers,
+  stickerColors,
+  size,
+  onStickerClick,
+  showColorIndicator = true,
+  showFaceLetter = false,
+}: {
+  stickers: (string[] | null)[];
+  stickerColors: CubeState;
+  size: number;
+  onStickerClick: (faceIdx: number, pos: number) => void;
+  showColorIndicator?: boolean;
+  showFaceLetter?: boolean;
+}) {
+  const cellStyle = size === 2
+    ? { width: "min(12vw, 3rem)", height: "min(12vw, 3rem)" }
+    : { width: "min(10vw, 2.5rem)", height: "min(10vw, 2.5rem)" };
+  const stickersPerFace = size * size;
+
+  function renderFace(faceIdx: number, label: string) {
+    const faceStickers = stickers[faceIdx];
+    return (
+      <div className="flex flex-col items-center">
+        <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}>
+          {Array.from({ length: stickersPerFace }).map((_, i) => {
+            const colorIdx = faceIdx * stickersPerFace + i;
+            const color = stickerColors[colorIdx];
+            const stickerUrl = faceStickers?.[i];
+            return (
+              <button
+                key={i}
+                className="border border-border/30 rounded-sm overflow-hidden cursor-pointer transition-all hover:scale-105 relative"
+                style={cellStyle}
+                onClick={() => onStickerClick(faceIdx, i)}
+              >
+                {stickerUrl ? (
+                  <img src={stickerUrl} alt={`贴纸 ${i}`} className="w-full h-full object-cover" draggable={false} />
+                ) : (
+                  <div className="w-full h-full" style={{ backgroundColor: FACE_COLORS_HEX[color] ?? "#888" }} />
+                )}
+                {showColorIndicator && (
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white/80" style={{ backgroundColor: FACE_COLORS_HEX[color] ?? "#888" }} />
+                )}
+                {showFaceLetter && (
+                  <span className="absolute top-0 right-0 text-[8px] font-bold leading-none px-0.5 rounded-sm" style={{ backgroundColor: FACE_COLORS_HEX[color] ?? "#888", color: color === "U" ? "#000" : "#fff" }}>
+                    {FACE_CHINESE[color] ?? color}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <span className="text-xs text-muted-foreground mt-1 font-medium">{label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1 overflow-x-auto">
+      <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
+        {renderFace(0, "上")}
+      </div>
+      <div className="flex gap-px sm:gap-1">
+        {renderFace(4, "左")}
+        {renderFace(2, "前")}
+        {renderFace(1, "右")}
+        {renderFace(5, "后")}
+      </div>
+      <div className="flex justify-center" style={{ marginLeft: `min(${size * 1.75}rem, ${size * 12}vw)` }}>
+        {renderFace(3, "下")}
       </div>
     </div>
   );
