@@ -128,11 +128,8 @@ describe("Pattern cube e2e: orientation round-trip", () => {
       { face: "B", idx: 49 },
     ];
 
-    for (const { face, idx } of centers) {
-      expect(finalOrientations[idx]).toBe(
-        initialOrientations[idx],
-        `Center orientation for ${face} face should return to initial value`
-      );
+    for (const { idx } of centers) {
+      expect(finalOrientations[idx]).toBe(initialOrientations[idx]);
     }
   });
 

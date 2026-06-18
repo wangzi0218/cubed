@@ -2,8 +2,6 @@ import type { CubeSize, Move } from "@/types/cube";
 
 export type StickerOrientations = number[];
 
-const FACE_ORDER = ["U", "R", "F", "D", "L", "B"] as const;
-
 const DIR_DELTA: Record<string, number> = {
   "": 1,
   "'": 3,
