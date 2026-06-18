@@ -8,7 +8,7 @@ import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
 import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
 import type { FaceColor, CubeState, StickerOrientations } from "@/types/cube";
-import { useSolve } from "@/hooks/useSolve";
+// import { useSolve } from "@/hooks/useSolve";
 import { imageDataToDataUrl, classifyStickerColor } from "@/lib/image-utils";
 import { createSolvedState } from "@/lib/cube-state";
 import { ColorPalette } from "@/components/cube/CubeNet";
@@ -62,11 +62,6 @@ export function PatternInput() {
   const [stickerActionPos, setStickerActionPos] = useState<number | null>(null);
 
   const isPattern = cubeVariant === "pattern";
-
-  const stickerImages = useMemo(() => {
-    const flat = stickers.flat();
-    return flat.every((s) => s !== null) ? (flat as string[]) : undefined;
-  }, [stickers]);
 
   const error = null;
   const solve = useCallback(() => {}, []);
