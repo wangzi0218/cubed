@@ -68,12 +68,10 @@ const PatternStickerGrid = memo(function PatternStickerGrid({
 
 const SingleFaceGrid = memo(function SingleFaceGrid({
   stickers, faceIdx, faceColor, stickerColors, stickerOrientations, size, onStickerClick,
-  showColorIndicator = true, showFaceLetter = false,
 }: {
   stickers: string[] | null; faceIdx: number; faceColor: FaceColor; stickerColors: CubeState;
   stickerOrientations?: StickerOrientations; size: number;
   onStickerClick: (faceIdx: number, pos: number) => void;
-  showColorIndicator?: boolean; showFaceLetter?: boolean;
 }) {
   const spf = size * size, cellSize = size === 2 ? "min(20vw, 5rem)" : "min(16vw, 4rem)";
   return (
@@ -228,7 +226,7 @@ export function PatternInput() {
         <div className="flex-1 flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">{extracting ? "正在提取贴纸图案..." : isPattern ? "对照实物，点击贴纸旋转方向或移动到其他面。" : "先选颜色，再点击格子修正。"}</p>
           {!extracting && (selectedFaceIdx >= 0
-            ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} />
+            ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
             : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} />
           )}
           <div className="flex gap-2 flex-wrap justify-center">
