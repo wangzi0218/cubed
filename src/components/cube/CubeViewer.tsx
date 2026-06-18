@@ -72,18 +72,47 @@ function useStickerTexture(imageUrl: string | null): THREE.CanvasTexture | null 
     }
 
     let cancelled = false;
+
+    // For data URLs, don't set crossOrigin (Safari blocks it)
     const img = new window.Image();
-    img.crossOrigin = "anonymous";
+    if (!imageUrl.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       if (cancelled) return;
+      try {
+        const canvas = document.createElement("canvas");
+        // Use power-of-two dimensions for better mobile Safari compatibility
+        const w = img.width;
+        const h = img.height;
+        canvas.width = w > 0 ? w : 1;
+        canvas.height = h > 0 ? h : 1;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        setTexture(tex);
+      } catch {
+        // Silently handle canvas creation errors on mobile
+      }
+    };
+    img.onerror = () => {
+      // Fallback: create a placeholder texture
+      if (cancelled) return;
       const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0);
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.needsUpdate = true;
-      setTexture(tex);
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.fillStyle = "#888";
+        ctx.fillRect(0, 0, 1, 1);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        setTexture(tex);
+      }
     };
     img.src = imageUrl;
 
@@ -498,12 +527,11 @@ export function CubeViewer({
         camera={{ position: [4, 3, 5], fov: 40 }}
         gl={{
           antialias: true,
-          alpha: true,
           powerPreference: "high-performance",
           failIfMajorPerformanceCaveat: false,
         }}
         dpr={[1, 2]}
-        style={{ background: "transparent" }}
+        style={{ background: "#f8f8f8" }}
       >
         <ambientLight intensity={0.8} />
         <directionalLight position={[5, 8, 5]} intensity={1.0} />
