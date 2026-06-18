@@ -32,7 +32,7 @@ const methods = [
     id: "topology" as InputMethod,
     icon: Palette,
     title: "魔方识别",
-    description: "拍摄边块和角块，通过空间关系自动识别状态，适用于任意魔方",
+    description: "", // filled dynamically based on cubeSize
   },
 ];
 
@@ -61,7 +61,13 @@ export function InputMethodSelect() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {methods.map((m) => (
+          {methods.map((m) => {
+            const desc = m.id === "topology"
+              ? (cubeSize === 2
+                ? "拍摄角块，通过空间关系自动识别状态，适用于任意魔方"
+                : "拍摄边块和角块，通过空间关系自动识别状态，适用于任意魔方")
+              : m.description;
+            return (
             <Card
               key={m.id}
               clickable
@@ -74,11 +80,11 @@ export function InputMethodSelect() {
                 <m.icon className="w-8 h-8 text-primary shrink-0" />
                 <div className="text-left">
                   <CardTitle className="text-base">{m.title}</CardTitle>
-                  <CardDescription>{m.description}</CardDescription>
+                  <CardDescription>{desc}</CardDescription>
                 </div>
               </CardHeader>
             </Card>
-          ))}
+          ); })}
         </div>
       </div>
     </div>
