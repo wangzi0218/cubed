@@ -66,7 +66,7 @@ export function PatternInput() {
           const photo = photos[i];
           if (!photo) continue;
           try {
-            const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true);
+            const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true, window.innerWidth, window.innerHeight);
             results[i] = applyRotation(raw, cubeSize, photoRotations[i]);
             if (cubeVariant === "standard") {
               for (let j = 0; j < stickersPerFace; j++) {

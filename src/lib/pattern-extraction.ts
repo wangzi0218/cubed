@@ -44,12 +44,20 @@ export function applyRotation<T>(grid: T[], size: number, degrees: number): T[] 
 /**
  * Extract sticker thumbnails from a captured face image.
  * Divides the image into a size×size grid and returns the center region of each cell as a data URL.
- * When cropToGuide is true, first crops to the guide overlay region (middle 55% of the smaller dimension).
+ * When cropToGuide is true, crops to match the camera guide overlay position.
+ *
+ * The guide overlay is a centered square at 55% of min(vw, vh). The camera uses
+ * object-cover to fill the container. We calculate the crop region by:
+ * 1. The guide covers ~55% of the container in the smaller dimension
+ * 2. object-cover may scale/crop the camera image differently
+ * 3. We use the container-to-image ratio to map guide coordinates to image coordinates
  */
 export function extractFaceStickers(
   imageData: ImageData,
   size: CubeSize,
-  cropToGuide = false
+  cropToGuide = false,
+  viewportWidth?: number,
+  viewportHeight?: number
 ): string[] {
   const { width, height } = imageData;
 
@@ -60,19 +68,40 @@ export function extractFaceStickers(
   const srcCtx = srcCanvas.getContext("2d")!;
   srcCtx.putImageData(imageData, 0, 0);
 
-  // Crop to the guide overlay region (matches GridOverlay's 55% vmin)
+  // Calculate crop region matching the guide overlay
   let drawW = width;
   let drawH = height;
   let offsetX = 0;
   let offsetY = 0;
+
   if (cropToGuide) {
-    const guidePercent = 0.55;
-    const minDim = Math.min(width, height);
-    const squareSize = Math.floor(minDim * guidePercent);
-    offsetX = Math.floor((width - squareSize) / 2);
-    offsetY = Math.floor((height - squareSize) / 2);
-    drawW = squareSize;
-    drawH = squareSize;
+    // Guide is centered, 55% of min(vw, vh)
+    const vpW = viewportWidth ?? width;
+    const vpH = viewportHeight ?? height;
+    const guideSize = Math.floor(Math.min(vpW, vpH) * 0.55);
+
+    // object-cover: the camera image fills the container.
+    // The image is scaled to cover the container, then centered.
+    const scaleX = width / vpW;
+    const scaleY = height / vpH;
+    const scale = Math.max(scaleX, scaleY); // cover = max scale
+
+    // The guide region in image coordinates:
+    // Guide center is at (vpW/2, vpH/2) in viewport
+    // In image coords: (vpW/2 * scale, vpH/2 * scale)
+    // But object-cover crops from center, so offset = (imgW - vpW*scale) / 2
+    const imgOffsetX = (width - vpW * scale) / 2;
+    const imgOffsetY = (height - vpH * scale) / 2;
+
+    // Guide region in image coords
+    const guideImgX = imgOffsetX + (vpW - guideSize) / 2 * scale;
+    const guideImgY = imgOffsetY + (vpH - guideSize) / 2 * scale;
+    const guideImgSize = guideSize * scale;
+
+    offsetX = Math.max(0, Math.floor(guideImgX));
+    offsetY = Math.max(0, Math.floor(guideImgY));
+    drawW = Math.min(Math.floor(guideImgSize), width - offsetX);
+    drawH = Math.min(Math.floor(guideImgSize), height - offsetY);
   }
 
   const cellW = Math.floor(drawW / size);
@@ -87,8 +116,8 @@ export function extractFaceStickers(
 
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
-      // Sample center 80% of each cell (reduced margin from 20% to 10%)
-      const margin = 0.1;
+      // Sample center 85% of each cell (small margin to avoid grid lines)
+      const margin = 0.08;
       const sx = offsetX + Math.floor(c * cellW + cellW * margin);
       const sy = offsetY + Math.floor(r * cellH + cellH * margin);
       const sw = Math.floor(cellW * (1 - 2 * margin));
@@ -111,7 +140,9 @@ export function extractFaceStickers(
 export function extractFaceStickersFromDataUrl(
   dataUrl: string,
   size: CubeSize,
-  cropToGuide = false
+  cropToGuide = false,
+  viewportWidth?: number,
+  viewportHeight?: number
 ): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -122,7 +153,7 @@ export function extractFaceStickersFromDataUrl(
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, img.width, img.height);
-      resolve(extractFaceStickers(imageData, size, cropToGuide));
+      resolve(extractFaceStickers(imageData, size, cropToGuide, viewportWidth, viewportHeight));
     };
     img.onerror = () => reject(new Error("Failed to load image"));
     img.src = dataUrl;
