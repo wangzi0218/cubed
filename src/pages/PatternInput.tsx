@@ -37,8 +37,11 @@ const FACE_HINTS: Record<string, string> = {
 
 const ORIENTATION_LABELS = ["0°", "90°", "180°", "270°"];
 
+let renderCount = 0;
+
 export function PatternInput() {
   const { cubeSize } = useCubeStore();
+  renderCount++;
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [cubeVariant, setCubeVariant] = useState<CubeVariant>("standard");
@@ -60,6 +63,8 @@ export function PatternInput() {
   const extractedRef = useRef(false);
   const [stickerAction, setStickerAction] = useState<{ faceIdx: number; pos: number } | null>(null);
 
+  if (renderCount % 5 === 1) console.log(`[PatternInput] render #${renderCount} phase=${phase} extracting=${extracting} stickers=${stickers[0]?.[0] ?? 'null'}`);
+
   const isPattern = cubeVariant === "pattern";
 
   const stickerImages = useMemo(() => {
@@ -77,8 +82,10 @@ export function PatternInput() {
   // ── Auto-extract stickers when entering confirm phase ──────────────────
   const prevPhaseRef = useRef(phase);
   useEffect(() => {
+    console.log(`[PatternInput] effect: phase=${phase} prev=${prevPhaseRef.current} extracted=${extractedRef.current}`);
     // Only run once: when transitioning INTO confirm phase
     if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
+      console.log('[PatternInput] effect: STARTING extraction');
       prevPhaseRef.current = phase;
       extractedRef.current = true;
 
@@ -111,9 +118,11 @@ export function PatternInput() {
           }
         }
         if (!cancelled) {
+          console.log('[PatternInput] extractAll: setting state');
           setStickers(results);
           setStickerColors(colors);
           setExtracting(false);
+          console.log('[PatternInput] extractAll: done');
         }
       }
       extractAll();
