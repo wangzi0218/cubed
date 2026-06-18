@@ -1,9 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, Palette, RotateCcw } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useCubeStore } from "@/stores/cube-store";
+import { useSolve } from "@/hooks/useSolve";
+import { createSolvedState } from "@/lib/cube-state";
+import { createInitialOrientations } from "@/lib/sticker-orientation";
+import type { CubeState, StickerOrientations } from "@/types/cube";
 import { FACE_ORDER } from "@/types/cube";
 import type { FacePhoto } from "@/lib/pattern-extraction";
 import { imageDataToDataUrl } from "@/lib/image-utils";
@@ -29,6 +33,16 @@ export function PatternInput() {
   const [captureIdx, setCaptureIdx] = useState(0);
   const [photos, setPhotos] = useState<(FacePhoto | null)[]>(() => Array(6).fill(null));
   const [photoRotations, setPhotoRotations] = useState<(0 | 90 | 180 | 270)[]>(() => Array(6).fill(0));
+  const [stickers, setStickers] = useState<(string[] | null)[]>(() => Array(6).fill(null));
+  const [stickerColors, setStickerColors] = useState<CubeState>(() => createSolvedState(cubeSize));
+  const [stickerOrientations, setStickerOrientations] = useState<StickerOrientations>(() => createInitialOrientations(cubeSize));
+
+  const isPattern = cubeVariant === "pattern";
+  const stickerImages = useMemo(() => {
+    const flat = stickers.flat();
+    return flat.every((s) => s !== null) ? (flat as string[]) : undefined;
+  }, [stickers]);
+  const { error, solve, clearError } = useSolve(stickerColors, cubeSize, stickerImages, isPattern ? stickerOrientations : undefined);
 
   const capturedCount = photos.filter((p) => p !== null).length;
 
