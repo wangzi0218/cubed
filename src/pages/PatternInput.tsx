@@ -50,7 +50,6 @@ export function PatternInput() {
   );
   const [extracting, setExtracting] = useState(false);
   const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
-  const [selectedFace, setSelectedFace] = useState<FaceColor | null>(null);
   const [stickerColors, setStickerColors] = useState<CubeState>(
     () => createSolvedState(cubeSize)
   );
@@ -296,67 +295,9 @@ export function PatternInput() {
   }
 
   // phase === "confirm"
-  const selectedFaceIdx = selectedFace ? FACE_ORDER.indexOf(selectedFace) : -1;
-
-  const handleStickerAction = useCallback(
-    (faceIdx: number, pos: number) => {
-      setStickerActionFace(faceIdx);
-      setStickerActionPos(pos);
-    },
     []
   );
 
-  const handleMoveSticker = useCallback(
-    (targetFaceIdx: number) => {
-      if (stickerActionFace === null || stickerActionPos === null) return;
-      if (stickerActionFace === targetFaceIdx) {
-        setStickerActionFace(null);
-        setStickerActionPos(null);
-        return;
-      }
-
-      const spf = cubeSize * cubeSize;
-      const srcIdx = stickerActionFace * spf + stickerActionPos;
-      const tgtIdx = targetFaceIdx * spf + stickerActionPos;
-
-      setStickers((prev) => {
-        const next = [...prev];
-        const srcStickers = [...(next[stickerActionFace!] ?? [])];
-        const tgtStickers = [...(next[targetFaceIdx] ?? [])];
-        const tmp = srcStickers[stickerActionPos!];
-        srcStickers[stickerActionPos!] = tgtStickers[stickerActionPos!];
-        tgtStickers[stickerActionPos!] = tmp;
-        next[stickerActionFace!] = srcStickers;
-        next[targetFaceIdx] = tgtStickers;
-        return next;
-      });
-
-      setStickerColors((prev) => {
-        const next = [...prev];
-        const tmp = next[srcIdx];
-        next[srcIdx] = next[tgtIdx];
-        next[tgtIdx] = tmp;
-        return next;
-      });
-
-      setStickerOrientations((prev) => {
-        const next = [...prev];
-        const tmp = next[srcIdx];
-        next[srcIdx] = next[tgtIdx];
-        next[tgtIdx] = tmp;
-        return next;
-      });
-
-      setStickerActionFace(null);
-      setStickerActionPos(null);
-    },
-    [stickerActionFace, stickerActionPos, cubeSize]
-  );
-
-  const handleRotateSticker = useCallback(
-    () => {
-      if (stickerActionFace === null || stickerActionPos === null) return;
-      handleStickerClick(stickerActionFace, stickerActionPos);
       setStickerActionFace(null);
       setStickerActionPos(null);
     },
@@ -410,9 +351,6 @@ export function PatternInput() {
   );
 }
 
-/**
- * Display the sticker thumbnails with color indicators in a cube net layout.
- */
 function PatternStickerGrid({
   stickers,
   stickerColors,
@@ -527,9 +465,6 @@ function PatternStickerGrid({
   );
 }
 
-/**
- * Display a single face's stickers in a larger grid for detailed inspection.
- */
 function SingleFaceGrid({
   stickers,
   faceIdx,
