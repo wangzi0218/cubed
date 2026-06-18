@@ -39,11 +39,14 @@ export function SolutionControls({
       const move = steps[nextIndex].move;
       onMoveStart?.(move);
 
-      // Delay step change until animation completes so the 3D viewer
-      // shows the pre-move state during the rotation animation.
+      // Delay step change until animation completes.
+      // Step change MUST happen before moveEnd so the 3D viewer
+      // transitions from rotated-pre-state to post-move-state seamlessly.
       timerRef.current = setTimeout(() => {
         onStepChange(nextIndex);
-        onMoveEnd?.();
+        // Small delay to let React re-render with the new state
+        // before clearing the animation overlay.
+        setTimeout(() => onMoveEnd?.(), 16);
       }, ANIMATION_DURATION);
     } else {
       onPlayToggle();
