@@ -197,7 +197,6 @@ export function PatternInput() {
     [cubeSize, isPattern]
   );
 
-  const handleStickerAction = useCallback((faceIdx: number, pos: number) => {
     setStickerActionFace(faceIdx);
     setStickerActionPos(pos);
   }, []);
