@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, Palette, RotateCcw, RotateCw, Zap } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
@@ -57,6 +57,7 @@ export function PatternInput() {
   const [stickerOrientations, setStickerOrientations] = useState<StickerOrientations>(
     () => createInitialOrientations(cubeSize)
   );
+  const extractedRef = useRef(false);
 
   const isPattern = cubeVariant === "pattern";
 
@@ -73,9 +74,10 @@ export function PatternInput() {
 
   // ── Auto-extract stickers when entering confirm phase ──────────────────
   useEffect(() => {
-    if (phase !== "confirm") return;
+    if (phase !== "confirm" || extractedRef.current) return;
 
     let cancelled = false;
+    extractedRef.current = true;
     setExtracting(true);
 
     async function extractAll() {
@@ -173,6 +175,7 @@ export function PatternInput() {
     setCaptureIdx(0);
     setStickers(Array(6).fill(null));
     setExtracting(false);
+    extractedRef.current = false;
     clearError();
   }, [clearError]);
 
