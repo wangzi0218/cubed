@@ -58,6 +58,7 @@ export function PatternInput() {
     () => createInitialOrientations(cubeSize)
   );
   const extractedRef = useRef(false);
+  const [stickerAction, setStickerAction] = useState<{ faceIdx: number; pos: number } | null>(null);
 
   const isPattern = cubeVariant === "pattern";
 
@@ -331,9 +332,6 @@ export function PatternInput() {
 
   // phase === "confirm"
   const selectedFaceIdx = selectedFace ? FACE_ORDER.indexOf(selectedFace) : -1;
-
-  // Sticker action panel state
-  const [stickerAction, setStickerAction] = useState<{ faceIdx: number; pos: number } | null>(null);
 
   const handleStickerAction = useCallback(
     (faceIdx: number, pos: number) => {
