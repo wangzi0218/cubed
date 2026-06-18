@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
 import { useCubeStore } from "@/stores/cube-store";
-import { FACE_ORDER } from "@/types/cube";
 
 export function PatternInput() {
   const { cubeSize } = useCubeStore();
