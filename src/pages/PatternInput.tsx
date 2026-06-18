@@ -7,7 +7,7 @@ import { useCubeStore } from "@/stores/cube-store";
 import { useSolve } from "@/hooks/useSolve";
 import { createSolvedState } from "@/lib/cube-state";
 import { createInitialOrientations } from "@/lib/sticker-orientation";
-import type { CubeState, StickerOrientations } from "@/types/cube";
+import type { FaceColor, CubeState, StickerOrientations } from "@/types/cube";
 import { FACE_ORDER } from "@/types/cube";
 import type { FacePhoto } from "@/lib/pattern-extraction";
 import { imageDataToDataUrl } from "@/lib/image-utils";
@@ -36,7 +36,7 @@ export function PatternInput() {
   const [stickers, setStickers] = useState<(string[] | null)[]>(() => Array(6).fill(null));
   const [extracting, setExtracting] = useState(false);
   const extractedRef = useRef(false);
-  const [stickerColors, _setStickerColors] = useState<CubeState>(() => createSolvedState(cubeSize));
+  const [stickerColors, setStickerColors] = useState<CubeState>(() => createSolvedState(cubeSize));
   const [stickerOrientations, _setStickerOrientations] = useState<StickerOrientations>(() => createInitialOrientations(cubeSize));
 
   const isPattern = cubeVariant === "pattern";
@@ -216,7 +216,10 @@ export function PatternInput() {
         <PageHeader title={`${cubeSize}×${cubeSize} 确认状态`} onBack={handleBackToCapture} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <p className="text-lg font-medium">已拍摄 {capturedCount} 张照片</p>
-          <p className="text-sm text-muted-foreground">展开图测试版</p>
+          <p className="text-sm text-muted-foreground">
+            {extracting ? "正在提取贴纸图案..." : "展开图测试版"}
+          </p>
+          {!extracting && (
           <div className="overflow-x-auto">
             <PatternStickerGrid
               stickers={stickers}
@@ -227,6 +230,7 @@ export function PatternInput() {
               showFaceLetter={isPattern}
             />
           </div>
+          )}
           <Button onClick={handleBackToCapture} variant="outline" className="gap-2">
             <RotateCcw className="w-4 h-4" />重新拍摄
           </Button>
