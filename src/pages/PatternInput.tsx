@@ -17,7 +17,6 @@ import type { FacePhoto } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
 import {
   createInitialOrientations,
-  setCenterOrientation,
 } from "@/lib/sticker-orientation";
 
 type Phase = "intro" | "capture" | "confirm";
@@ -169,13 +168,6 @@ export function PatternInput() {
       handleStickerClick(faceIdx, pos);
     },
     [cubeSize, handleStickerClick]
-  );
-
-  const handleCenterOrientationChange = useCallback(
-    (faceIdx: number, value: number) => {
-      setStickerOrientations((prev) => setCenterOrientation(prev, faceIdx, value, cubeSize));
-    },
-    [cubeSize]
   );
 
   // ── Navigation ──────────────────────────────────────────────────────────
