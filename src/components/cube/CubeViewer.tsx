@@ -496,12 +496,19 @@ export function CubeViewer({
     <div className={className}>
       <Canvas
         camera={{ position: [4, 3, 5], fov: 40 }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance",
+          failIfMajorPerformanceCaveat: false,
+        }}
+        dpr={[1, 2]}
         style={{ background: "transparent" }}
       >
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 8, 5]} intensity={0.8} />
-        <directionalLight position={[-3, 2, -4]} intensity={0.3} />
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[5, 8, 5]} intensity={1.0} />
+        <directionalLight position={[-3, 2, -4]} intensity={0.5} />
+        <directionalLight position={[0, -5, 0]} intensity={0.3} />
         <CubeModel
           state={state}
           size={size}

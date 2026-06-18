@@ -35,7 +35,7 @@ export function CubePreviewLayout({
         <div className="flex flex-col lg:flex-row gap-8 flex-1">
           {/* Left: 3D preview */}
           <div className="flex-1 flex flex-col items-center">
-            <div className="w-full max-w-md aspect-square rounded-xl border bg-card/50 overflow-hidden">
+            <div className="w-full max-w-md aspect-square rounded-xl border bg-card overflow-hidden">
               <CubeViewer state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} onStickerClick={onStickerClick} />
             </div>
             <p className="text-sm text-muted-foreground mt-2">{previewHint}</p>
