@@ -68,12 +68,9 @@ export function PatternInput() {
     return flat.every((s) => s !== null) ? (flat as string[]) : undefined;
   }, [stickers]);
 
-  const { error, solve, clearError } = useSolve(
-    stickerColors,
-    cubeSize,
-    stickerImages,
-    isPattern ? stickerOrientations : undefined
-  );
+  const error = null;
+  const solve = useCallback(() => {}, []);
+  const clearError = useCallback(() => {}, []);
 
   // ── Auto-extract stickers when entering confirm phase ──────────────────
   const prevPhaseRef = useRef(phase);
