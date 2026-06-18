@@ -37,11 +37,8 @@ const FACE_HINTS: Record<string, string> = {
 
 const ORIENTATION_LABELS = ["0°", "90°", "180°", "270°"];
 
-let renderCount = 0;
-
 export function PatternInput() {
   const { cubeSize } = useCubeStore();
-  renderCount++;
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [cubeVariant, setCubeVariant] = useState<CubeVariant>("standard");
@@ -61,9 +58,8 @@ export function PatternInput() {
     () => createInitialOrientations(cubeSize)
   );
   const extractedRef = useRef(false);
-  const [stickerAction, setStickerAction] = useState<{ faceIdx: number; pos: number } | null>(null);
-
-  if (renderCount % 5 === 1) console.log(`[PatternInput] render #${renderCount} phase=${phase} extracting=${extracting} stickers=${stickers[0]?.[0] ?? 'null'}`);
+  const [stickerActionFace, setStickerActionFace] = useState<number | null>(null);
+  const [stickerActionPos, setStickerActionPos] = useState<number | null>(null);
 
   const isPattern = cubeVariant === "pattern";
 
@@ -82,10 +78,8 @@ export function PatternInput() {
   // ── Auto-extract stickers when entering confirm phase ──────────────────
   const prevPhaseRef = useRef(phase);
   useEffect(() => {
-    console.log(`[PatternInput] effect: phase=${phase} prev=${prevPhaseRef.current} extracted=${extractedRef.current}`);
     // Only run once: when transitioning INTO confirm phase
     if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
-      console.log('[PatternInput] effect: STARTING extraction');
       prevPhaseRef.current = phase;
       extractedRef.current = true;
 
@@ -118,11 +112,9 @@ export function PatternInput() {
           }
         }
         if (!cancelled) {
-          console.log('[PatternInput] extractAll: setting state');
           setStickers(results);
           setStickerColors(colors);
           setExtracting(false);
-          console.log('[PatternInput] extractAll: done');
         }
       }
       extractAll();
@@ -344,35 +336,37 @@ export function PatternInput() {
 
   const handleStickerAction = useCallback(
     (faceIdx: number, pos: number) => {
-      setStickerAction({ faceIdx, pos });
+      setStickerActionFace(faceIdx);
+      setStickerActionPos(pos);
     },
     []
   );
 
   const handleMoveSticker = useCallback(
     (targetFaceIdx: number) => {
-      if (!stickerAction) return;
-      const { faceIdx: srcFace, pos: srcPos } = stickerAction;
-      if (srcFace === targetFaceIdx) { setStickerAction(null); return; }
+      if (stickerActionFace === null || stickerActionPos === null) return;
+      if (stickerActionFace === targetFaceIdx) {
+        setStickerActionFace(null);
+        setStickerActionPos(null);
+        return;
+      }
 
       const spf = cubeSize * cubeSize;
-      const srcIdx = srcFace * spf + srcPos;
-      const tgtIdx = targetFaceIdx * spf + srcPos; // same position on target face
+      const srcIdx = stickerActionFace * spf + stickerActionPos;
+      const tgtIdx = targetFaceIdx * spf + stickerActionPos;
 
-      // Swap sticker images
       setStickers((prev) => {
         const next = [...prev];
-        const srcStickers = [...(next[srcFace] ?? [])];
+        const srcStickers = [...(next[stickerActionFace!] ?? [])];
         const tgtStickers = [...(next[targetFaceIdx] ?? [])];
-        const tmp = srcStickers[srcPos];
-        srcStickers[srcPos] = tgtStickers[srcPos];
-        tgtStickers[srcPos] = tmp;
-        next[srcFace] = srcStickers;
+        const tmp = srcStickers[stickerActionPos!];
+        srcStickers[stickerActionPos!] = tgtStickers[stickerActionPos!];
+        tgtStickers[stickerActionPos!] = tmp;
+        next[stickerActionFace!] = srcStickers;
         next[targetFaceIdx] = tgtStickers;
         return next;
       });
 
-      // Swap colors
       setStickerColors((prev) => {
         const next = [...prev];
         const tmp = next[srcIdx];
@@ -381,7 +375,6 @@ export function PatternInput() {
         return next;
       });
 
-      // Swap orientations
       setStickerOrientations((prev) => {
         const next = [...prev];
         const tmp = next[srcIdx];
@@ -390,18 +383,20 @@ export function PatternInput() {
         return next;
       });
 
-      setStickerAction(null);
+      setStickerActionFace(null);
+      setStickerActionPos(null);
     },
-    [stickerAction, cubeSize]
+    [stickerActionFace, stickerActionPos, cubeSize]
   );
 
   const handleRotateSticker = useCallback(
     () => {
-      if (!stickerAction) return;
-      handleStickerClick(stickerAction.faceIdx, stickerAction.pos);
-      setStickerAction(null);
+      if (stickerActionFace === null || stickerActionPos === null) return;
+      handleStickerClick(stickerActionFace, stickerActionPos);
+      setStickerActionFace(null);
+      setStickerActionPos(null);
     },
-    [stickerAction, handleStickerClick]
+    [stickerActionFace, stickerActionPos, handleStickerClick]
   );
 
   return (
@@ -482,12 +477,12 @@ export function PatternInput() {
           </div>
 
           {/* Sticker action popup */}
-          {stickerAction && isPattern && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setStickerAction(null)}>
+          {stickerActionFace !== null && isPattern && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); }}>
               <div className="bg-card rounded-xl p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
                 <p className="text-sm font-medium text-center">贴纸操作</p>
                 <p className="text-xs text-muted-foreground text-center">
-                  {FACE_CHINESE[FACE_ORDER[stickerAction.faceIdx]]}面 第 {stickerAction.pos + 1} 格
+                  {FACE_CHINESE[FACE_ORDER[stickerActionFace]]}面 第 {(stickerActionPos ?? 0) + 1} 格
                 </p>
                 <div className="flex flex-col gap-2">
                   <Button variant="outline" onClick={handleRotateSticker}>
@@ -500,7 +495,7 @@ export function PatternInput() {
                         key={face}
                         variant="outline"
                         size="sm"
-                        disabled={idx === stickerAction.faceIdx}
+                        disabled={idx === stickerActionFace}
                         onClick={() => handleMoveSticker(idx)}
                       >
                         {FACE_CHINESE[face]}
@@ -508,7 +503,7 @@ export function PatternInput() {
                     ))}
                   </div>
                 </div>
-                <Button variant="ghost" className="w-full" onClick={() => setStickerAction(null)}>
+                <Button variant="ghost" className="w-full" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); }}>
                   取消
                 </Button>
               </div>
