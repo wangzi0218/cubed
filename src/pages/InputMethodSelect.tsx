@@ -26,7 +26,7 @@ const methods = [
     id: "pattern" as InputMethod,
     icon: Image,
     title: "图案识别",
-    description: "拍摄 6 面，拖拽分配到面位置，适用于图片/纹理魔方",
+    description: "依次拍摄 6 个面，系统自动识别图案，适用于图片/纹理魔方",
   },
   {
     id: "topology" as InputMethod,

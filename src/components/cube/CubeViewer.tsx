@@ -12,7 +12,7 @@ function getColor(face: FaceColor): string {
   return FACE_COLORS[face].hex;
 }
 
-function getCubieStickerIndex(
+export function getCubieStickerIndex(
   axis: "x" | "y" | "z",
   sign: number,
   size: CubeSize,
@@ -158,6 +158,7 @@ interface CubieProps {
   stickerImages?: string[];
   stickerOrientations?: StickerOrientations;
   highlight?: boolean;
+  onStickerClick?: (stickerIndex: number) => void;
 }
 
 function StickerFace({
@@ -165,11 +166,13 @@ function StickerFace({
   rotation,
   stickerUrl,
   orientation = 0,
+  onClick,
 }: {
   position: [number, number, number];
   rotation: [number, number, number];
   stickerUrl: string;
   orientation?: number;
+  onClick?: () => void;
 }) {
   const texture = useStickerTexture(stickerUrl);
   if (!texture) return null;
@@ -182,7 +185,7 @@ function StickerFace({
   ];
 
   return (
-    <mesh position={position} rotation={rot}>
+    <mesh position={position} rotation={rot} onClick={onClick}>
       <planeGeometry args={[CUBIE_SIZE * 0.92, CUBIE_SIZE * 0.92]} />
       <meshStandardMaterial
         map={texture}
@@ -194,7 +197,7 @@ function StickerFace({
   );
 }
 
-function Cubie({ position, state, size, stickerImages, stickerOrientations, highlight }: CubieProps) {
+function Cubie({ position, state, size, stickerImages, stickerOrientations, highlight, onStickerClick }: CubieProps) {
   const [x, y, z] = position;
 
   const materials = useMemo(() => {
@@ -254,7 +257,7 @@ function Cubie({ position, state, size, stickerImages, stickerOrientations, high
       .map(({ axis, sign, pos, rot }) => {
         const idx = getCubieStickerIndex(axis, sign, size, x, y, z);
         const orientation = stickerOrientations ? stickerOrientations[idx] ?? 0 : 0;
-        return { pos, rot, url: stickerImages[idx], orientation };
+        return { pos, rot, url: stickerImages[idx], orientation, stickerIdx: idx };
       });
   }, [stickerImages, stickerOrientations, size, x, y, z]);
 
@@ -270,6 +273,7 @@ function Cubie({ position, state, size, stickerImages, stickerOrientations, high
           rotation={face.rot}
           stickerUrl={face.url}
           orientation={face.orientation}
+          onClick={onStickerClick ? () => onStickerClick(face.stickerIdx) : undefined}
         />
       ))}
       {highlight && (
@@ -289,9 +293,10 @@ interface AnimatedFaceProps {
   stickerImages?: string[];
   stickerOrientations?: StickerOrientations;
   progress: number; // 0 to 1
+  onStickerClick?: (stickerIndex: number) => void;
 }
 
-function AnimatedFace({ move, state, size, stickerImages, stickerOrientations, progress }: AnimatedFaceProps) {
+function AnimatedFace({ move, state, size, stickerImages, stickerOrientations, progress, onStickerClick }: AnimatedFaceProps) {
   const half = (size - 1) / 2;
   const step = size === 2 ? 1 : 1;
 
@@ -356,7 +361,7 @@ function AnimatedFace({ move, state, size, stickerImages, stickerOrientations, p
   return (
     <group ref={groupRef}>
       {positions.map((pos, i) => (
-        <Cubie key={i} position={pos} state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} />
+        <Cubie key={i} position={pos} state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} onStickerClick={onStickerClick} />
       ))}
     </group>
   );
@@ -369,9 +374,10 @@ interface CubeModelProps {
   stickerOrientations?: StickerOrientations;
   currentMove?: Move | null;
   moveProgress?: number; // 0 to 1
+  onStickerClick?: (stickerIndex: number) => void;
 }
 
-function CubeModel({ state, size, stickerImages, stickerOrientations, currentMove, moveProgress = 0 }: CubeModelProps) {
+function CubeModel({ state, size, stickerImages, stickerOrientations, currentMove, moveProgress = 0, onStickerClick }: CubeModelProps) {
   const half = (size - 1) / 2;
   const step = size === 2 ? 1 : 1;
 
@@ -410,7 +416,7 @@ function CubeModel({ state, size, stickerImages, stickerOrientations, currentMov
     return (
       <group>
         {staticPositions.map((pos, i) => (
-          <Cubie key={`s-${i}`} position={pos} state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} />
+          <Cubie key={`s-${i}`} position={pos} state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} onStickerClick={onStickerClick} />
         ))}
         <AnimatedFace
           move={currentMove}
@@ -419,6 +425,7 @@ function CubeModel({ state, size, stickerImages, stickerOrientations, currentMov
           stickerImages={stickerImages}
           stickerOrientations={stickerOrientations}
           progress={moveProgress}
+          onStickerClick={onStickerClick}
         />
       </group>
     );
@@ -436,7 +443,7 @@ function CubeModel({ state, size, stickerImages, stickerOrientations, currentMov
   return (
     <group>
       {positions.map((pos, i) => (
-        <Cubie key={i} position={pos} state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} />
+        <Cubie key={i} position={pos} state={state} size={size} stickerImages={stickerImages} stickerOrientations={stickerOrientations} onStickerClick={onStickerClick} />
       ))}
     </group>
   );
@@ -472,6 +479,7 @@ interface CubeViewerProps {
   currentMove?: Move | null;
   moveProgress?: number;
   className?: string;
+  onStickerClick?: (stickerIndex: number) => void;
 }
 
 export function CubeViewer({
@@ -482,6 +490,7 @@ export function CubeViewer({
   currentMove,
   moveProgress,
   className,
+  onStickerClick,
 }: CubeViewerProps) {
   return (
     <div className={className}>
@@ -500,6 +509,7 @@ export function CubeViewer({
           stickerOrientations={stickerOrientations}
           currentMove={currentMove}
           moveProgress={moveProgress}
+          onStickerClick={onStickerClick}
         />
         <OrbitControls
           enablePan={false}

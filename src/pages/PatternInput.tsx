@@ -1,17 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Camera,
-  Check,
-  Image,
-  Palette,
-  RotateCcw,
-  Zap,
-} from "lucide-react";
+import { Camera, Image, Palette, RotateCcw, Zap } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
-import { PatternFaceSlot, PhotoThumb } from "@/components/cube/PatternFaceSlot";
 import { CubePreviewLayout } from "@/components/layout/CubePreviewLayout";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { ActionBar } from "@/components/layout/ActionBar";
 import { useCubeStore } from "@/stores/cube-store";
@@ -21,12 +12,8 @@ import { useSolve } from "@/hooks/useSolve";
 import { imageDataToDataUrl, classifyStickerColor } from "@/lib/image-utils";
 import { createSolvedState } from "@/lib/cube-state";
 import { ColorPalette } from "@/components/cube/CubeNet";
-import {
-  extractFaceStickersFromDataUrl,
-  applyRotation,
-  allFacesAssigned,
-} from "@/lib/pattern-extraction";
-import type { FacePhoto, FaceAssignment } from "@/lib/pattern-extraction";
+import { extractFaceStickersFromDataUrl } from "@/lib/pattern-extraction";
+import type { FacePhoto } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
 import { CenterOrientationEditor } from "@/components/cube/CenterOrientationEditor";
 import {
@@ -35,29 +22,37 @@ import {
   setCenterOrientation,
 } from "@/lib/sticker-orientation";
 
-type Phase = "intro" | "capture" | "assign" | "review";
+type Phase = "intro" | "capture" | "confirm";
 type CubeVariant = "standard" | "pattern";
 
 const FACE_CHINESE: Record<string, string> = {
   U: "上", R: "右", F: "前", D: "下", L: "左", B: "后",
 };
 
+const FACE_HINTS: Record<string, string> = {
+  U: "将上面正对摄像头",
+  R: "将右面正对摄像头",
+  F: "将前面正对摄像头",
+  D: "将下面正对摄像头",
+  L: "将左面正对摄像头",
+  B: "将后面正对摄像头",
+};
+
+const ORIENTATION_LABELS = ["0°", "90°", "180°", "270°"];
+
 export function PatternInput() {
-  const { cubeSize, setAppStep } = useCubeStore();
+  const { cubeSize } = useCubeStore();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [cubeVariant, setCubeVariant] = useState<CubeVariant>("standard");
-  const [photos, setPhotos] = useState<FacePhoto[]>([]);
+  const [photos, setPhotos] = useState<(FacePhoto | null)[]>(() => Array(6).fill(null));
   const [captureIdx, setCaptureIdx] = useState(0);
-  const [assignments, setAssignments] = useState<(FaceAssignment | null)[]>(
-    () => Array(6).fill(null)
-  );
   const [stickers, setStickers] = useState<(string[] | null)[]>(
     () => Array(6).fill(null)
   );
   const [extracting, setExtracting] = useState(false);
-  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
+  const [editMode, setEditMode] = useState<"face" | "orientation">("face");
   const [stickerColors, setStickerColors] = useState<CubeState>(
     () => createSolvedState(cubeSize)
   );
@@ -78,8 +73,9 @@ export function PatternInput() {
     isPattern ? stickerOrientations : undefined
   );
 
+  // ── Auto-extract stickers when entering confirm phase ──────────────────
   useEffect(() => {
-    if (phase !== "review") return;
+    if (phase !== "confirm") return;
 
     let cancelled = false;
     setExtracting(true);
@@ -90,20 +86,16 @@ export function PatternInput() {
       const colors: FaceColor[] = createSolvedState(cubeSize);
 
       for (let i = 0; i < 6; i++) {
-        const assignment = assignments[i];
-        if (assignment === null) continue;
-        const photo = photos[assignment.photoIndex];
+        const photo = photos[i];
         if (!photo) continue;
         try {
           const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true);
-          const rotated = applyRotation(raw, cubeSize, assignment.rotation);
-          results[i] = rotated;
+          results[i] = raw;
 
-          // Only auto-detect colors for standard cubes
           if (cubeVariant === "standard") {
             for (let j = 0; j < stickersPerFace; j++) {
               try {
-                colors[i * stickersPerFace + j] = await classifyStickerColor(rotated[j]);
+                colors[i * stickersPerFace + j] = await classifyStickerColor(raw[j]);
               } catch {
                 // keep default color on failure
               }
@@ -121,10 +113,9 @@ export function PatternInput() {
     }
     extractAll();
     return () => { cancelled = true; };
-  }, [phase, assignments, photos, cubeSize, cubeVariant]);
+  }, [phase, photos, cubeSize, cubeVariant]);
 
-  // ── Capture handlers ────────────────────────────────────────────────────
-
+  // ── Capture handler ────────────────────────────────────────────────────
   const handleCapture = useCallback(
     (imageData: ImageData) => {
       const dataUrl = imageDataToDataUrl(imageData);
@@ -137,7 +128,7 @@ export function PatternInput() {
       if (captureIdx < 5) {
         setCaptureIdx((i) => i + 1);
       } else {
-        setPhase("assign");
+        setPhase("confirm");
       }
     },
     [captureIdx]
@@ -148,92 +139,37 @@ export function PatternInput() {
     setPhase("capture");
   }, []);
 
-  // ── Assignment handlers ─────────────────────────────────────────────────
-
-  const handleDrop = useCallback((faceIdx: number, photoIdx: number) => {
-    setAssignments((prev) => {
-      const next = [...prev];
-      for (let i = 0; i < 6; i++) {
-        if (i !== faceIdx && next[i]?.photoIndex === photoIdx) {
-          next[i] = null;
-        }
-      }
-      next[faceIdx] = { photoIndex: photoIdx, rotation: 0 };
-      return next;
-    });
-  }, []);
-
-  const handleRotate = useCallback((faceIdx: number) => {
-    setAssignments((prev) => {
-      const next = [...prev];
-      const current = next[faceIdx];
-      if (!current) return next;
-      const newRotation = ((current.rotation + 90) % 360) as 0 | 90 | 180 | 270;
-      next[faceIdx] = { ...current, rotation: newRotation };
-      return next;
-    });
-  }, []);
-
-  const handleRemove = useCallback((faceIdx: number) => {
-    setAssignments((prev) => {
-      const next = [...prev];
-      next[faceIdx] = null;
-      return next;
-    });
-  }, []);
-
-  // ── Sticker click: set color ──────────────────────────────────────────
-
+  // ── Sticker click: set color (standard) or orientation (pattern) ──────
   const handleStickerClick = useCallback(
     (faceIdx: number, pos: number) => {
       const stickersPerFace = cubeSize * cubeSize;
       const idx = faceIdx * stickersPerFace + pos;
-      setStickerColors((prev) => {
-        const next = [...prev];
-        next[idx] = selectedColor;
-        return next;
-      });
+      if (isPattern && editMode === "orientation") {
+        setStickerOrientations((prev) => {
+          const next = [...prev];
+          next[idx] = ((prev[idx] ?? 0) + 1) % 4;
+          return next;
+        });
+      } else {
+        setStickerColors((prev) => {
+          const next = [...prev];
+          next[idx] = selectedColor;
+          return next;
+        });
+      }
     },
-    [cubeSize, selectedColor]
+    [cubeSize, selectedColor, isPattern, editMode]
   );
 
-  // ── Navigation ──────────────────────────────────────────────────────────
-
-  const handleRestart = useCallback(() => {
-    setPhase("intro");
-    setCubeVariant("standard");
-    setPhotos([]);
-    setCaptureIdx(0);
-    setAssignments(Array(6).fill(null));
-    setStickers(Array(6).fill(null));
-    setExtracting(false);
-    setStickerColors(createSolvedState(cubeSize));
-    setStickerOrientations(createInitialOrientations(cubeSize));
-    setEditMode("face");
-    clearError();
-  }, [clearError, cubeSize]);
-
-  const handleBackToAssign = useCallback(() => {
-    setPhase("assign");
-    setStickers(Array(6).fill(null));
-    setExtracting(false);
-    setEditMode("face");
-    clearError();
-  }, [clearError]);
-
-  const [editMode, setEditMode] = useState<"face" | "orientation">("face");
-
-  const handleStickerOrientChange = useCallback(
-    (faceIdx: number, pos: number) => {
-      const stickersPerFace = cubeSize * cubeSize;
-      const idx = faceIdx * stickersPerFace + pos;
-      setStickerOrientations((prev) => {
-        const next = [...prev];
-        next[idx] = ((prev[idx] ?? 0) + 1) % 4;
-        return next;
-      });
+  // ── 3D sticker click handler ───────────────────────────────────────────
+  const handle3DStickerClick = useCallback(
+    (stickerIndex: number) => {
+      const size2 = cubeSize * cubeSize;
+      const faceIdx = Math.floor(stickerIndex / size2);
+      const pos = stickerIndex % size2;
+      handleStickerClick(faceIdx, pos);
     },
-    [cubeSize]
+    [cubeSize, handleStickerClick]
   );
 
   const handleCenterOrientationChange = useCallback(
@@ -243,7 +179,17 @@ export function PatternInput() {
     [cubeSize]
   );
 
-  const backToInputMethod = useCallback(() => setAppStep("input-method"), [setAppStep]);
+  // ── Navigation ──────────────────────────────────────────────────────────
+  const handleBackToCapture = useCallback(() => {
+    setPhase("capture");
+    setCaptureIdx(0);
+    setStickers(Array(6).fill(null));
+    setExtracting(false);
+    clearError();
+  }, [clearError]);
+
+  // ── Capture phase progress ─────────────────────────────────────────────
+  const capturedCount = photos.filter((p) => p !== null).length;
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -301,13 +247,13 @@ export function PatternInput() {
           <div className="text-left space-y-2">
             <p className="text-sm font-medium">操作步骤</p>
             <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-              <li>依次拍摄魔方的 6 个面</li>
-              <li>点击照片选中，再点击展开图中对应的面位置</li>
-              <li>旋转照片，让相邻面的边缘图案对齐</li>
+              <li>按照提示依次拍摄魔方的 6 个面（上→右→前→下→左→后）</li>
+              <li>系统自动提取每个面的贴纸图案</li>
+              <li>在 3D 预览中确认是否与实物一致</li>
               <li>
                 {cubeVariant === "standard"
-                  ? "确认后系统自动检测颜色，修正错误即可求解"
-                  : "确认后查看贴纸图案，为每个贴纸分配所属面"}
+                  ? "修正颜色后求解"
+                  : "调整图案方向后求解"}
               </li>
             </ol>
           </div>
@@ -326,16 +272,19 @@ export function PatternInput() {
   }
 
   if (phase === "capture") {
+    const currentFace = FACE_ORDER[captureIdx];
     return (
       <div className="flex-1 flex flex-col">
         <CameraCapture
-          faceLabel={`第 ${captureIdx + 1} 面`}
+          faceLabel={FACE_CHINESE[currentFace] ?? currentFace}
           faceIndex={captureIdx}
           totalFaces={6}
           onCapture={handleCapture}
+          faceLetter={currentFace}
+          faceHint={FACE_HINTS[currentFace]}
         />
 
-        {photos.length > 0 && (
+        {capturedCount > 0 && (
           <div className="bg-muted/50 px-4 py-3">
             <div className="flex items-center gap-2 justify-center">
               <span className="text-xs text-muted-foreground mr-2">已拍摄：</span>
@@ -346,12 +295,20 @@ export function PatternInput() {
                     "w-12 h-12 rounded border-2 overflow-hidden transition-all",
                     i === captureIdx
                       ? "border-primary ring-2 ring-primary/30"
-                      : "border-border hover:border-primary/50"
+                      : photo
+                        ? "border-border hover:border-primary/50"
+                        : "border-border/50 opacity-40"
                   )}
-                  onClick={() => handleRetakePhoto(i)}
-                  title={`重拍第 ${i + 1} 面`}
+                  onClick={() => photo && handleRetakePhoto(i)}
+                  title={photo ? `重拍${FACE_CHINESE[FACE_ORDER[i]]}面` : `${FACE_CHINESE[FACE_ORDER[i]]}面未拍摄`}
                 >
-                  <img src={photo.dataUrl} alt={`第 ${i + 1} 面`} className="w-full h-full object-cover" />
+                  {photo ? (
+                    <img src={photo.dataUrl} alt={FACE_CHINESE[FACE_ORDER[i]]} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                      {FACE_CHINESE[FACE_ORDER[i]]}
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
@@ -361,113 +318,7 @@ export function PatternInput() {
     );
   }
 
-  if (phase === "assign") {
-    return (
-      <div className="flex-1 flex flex-col">
-        <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
-          <PageHeader
-            title={`${cubeSize}×${cubeSize} 分配面位`}
-            onBack={backToInputMethod}
-          />
-
-          <div className="flex-1 flex flex-col lg:flex-row gap-8">
-            {/* Left: photo list */}
-            <div className="lg:w-48 flex flex-col gap-4">
-              <p className="text-sm font-medium">拍摄的照片</p>
-              <div className="flex lg:flex-col gap-2 flex-wrap">
-                {photos.map((photo, i) => (
-                  <PhotoThumb
-                    key={i}
-                    index={i}
-                    dataUrl={photo.dataUrl}
-                    assigned={assignments.some((a) => a?.photoIndex === i)}
-                    selected={selectedPhotoIdx === i}
-                    onSelect={() => setSelectedPhotoIdx(selectedPhotoIdx === i ? null : i)}
-                  />
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-auto">
-                {selectedPhotoIdx !== null ? "点击右侧面位分配" : "点击照片选中，再点击面位分配"}
-              </p>
-            </div>
-
-            {/* Right: cube net face slots */}
-            <div className="flex-1 flex flex-col items-center gap-6">
-              <p className="text-sm font-medium">将照片分配到展开图的面位置</p>
-
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex justify-center" style={{ marginLeft: "5rem" }}>
-                  <PatternFaceSlot
-                    face="U"
-                    photoUrl={assignments[0] ? photos[assignments[0].photoIndex]?.dataUrl ?? null : null}
-                    rotation={assignments[0]?.rotation ?? 0}
-                    selected={selectedPhotoIdx !== null}
-                    onSlotTap={() => { if (selectedPhotoIdx !== null) { handleDrop(0, selectedPhotoIdx); setSelectedPhotoIdx(null); } }}
-                    onRotate={() => handleRotate(0)}
-                    onRemove={() => handleRemove(0)}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  {[4, 2, 1, 5].map((faceIdx) => (
-                    <PatternFaceSlot
-                      key={faceIdx}
-                      face={FACE_ORDER[faceIdx]}
-                      photoUrl={assignments[faceIdx] ? photos[assignments[faceIdx].photoIndex]?.dataUrl ?? null : null}
-                      rotation={assignments[faceIdx]?.rotation ?? 0}
-                      selected={selectedPhotoIdx !== null}
-                      onSlotTap={() => { if (selectedPhotoIdx !== null) { handleDrop(faceIdx, selectedPhotoIdx); setSelectedPhotoIdx(null); } }}
-                      onRotate={() => handleRotate(faceIdx)}
-                      onRemove={() => handleRemove(faceIdx)}
-                    />
-                  ))}
-                </div>
-
-                <div className="flex justify-center" style={{ marginLeft: "5rem" }}>
-                  <PatternFaceSlot
-                    face="D"
-                    photoUrl={assignments[3] ? photos[assignments[3].photoIndex]?.dataUrl ?? null : null}
-                    rotation={assignments[3]?.rotation ?? 0}
-                    selected={selectedPhotoIdx !== null}
-                    onSlotTap={() => { if (selectedPhotoIdx !== null) { handleDrop(3, selectedPhotoIdx); setSelectedPhotoIdx(null); } }}
-                    onRotate={() => handleRotate(3)}
-                    onRemove={() => handleRemove(3)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center gap-3 mt-4">
-                <p className="text-sm text-muted-foreground">
-                  已分配 {assignments.filter((a) => a !== null).length} / 6 面
-                </p>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="gap-2" onClick={() => {
-                    setAssignments(Array(6).fill(null));
-                  }}>
-                    <RotateCcw className="w-4 h-4" />
-                    重新分配
-                  </Button>
-                  <Button variant="outline" className="gap-2" onClick={handleRestart}>
-                    重新拍摄
-                  </Button>
-                  <Button
-                    className="gap-2"
-                    disabled={!allFacesAssigned(assignments)}
-                    onClick={() => setPhase("review")}
-                  >
-                    <Check className="w-4 h-4" />
-                    继续
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // phase === "review"
+  // phase === "confirm"
   const centerStickers = stickers.map((face) => {
     if (!face) return "";
     const centerPos = Math.floor(face.length / 2);
@@ -477,12 +328,14 @@ export function PatternInput() {
 
   return (
     <CubePreviewLayout
-      title={`${cubeSize}×${cubeSize} 提取结果`}
-      onBack={backToInputMethod}
+      title={`${cubeSize}×${cubeSize} 确认状态`}
+      onBack={handleBackToCapture}
       state={stickerColors}
       size={cubeSize}
       stickerImages={stickerImages}
       stickerOrientations={isPattern ? stickerOrientations : undefined}
+      onStickerClick={handle3DStickerClick}
+      previewHint="点击贴纸可修正，拖拽旋转查看"
     >
       {isPattern && (
         <div className="flex gap-2">
@@ -512,9 +365,9 @@ export function PatternInput() {
         <p className="text-xs text-muted-foreground mb-3">
           {isPattern
             ? editMode === "face"
-              ? "选择一个面标识，再点击贴纸分配。根据贴纸图案判断它属于哪个面。"
-              : "点击贴纸旋转图案方向，每点一次转 90°。让图案朝向与实物一致。"
-            : "先选颜色，再点击格子修正。参考左侧图片贴纸确认颜色。"}
+              ? "选择一个面标识，再点击贴纸分配。"
+              : "点击贴纸旋转图案方向，每点一次转 90°。"
+            : "先选颜色，再点击格子修正。"}
         </p>
         {editMode === "face" && (
           <ColorPalette
@@ -547,7 +400,6 @@ export function PatternInput() {
               stickerOrientations={isPattern ? stickerOrientations : undefined}
               size={cubeSize}
               onStickerClick={handleStickerClick}
-              onStickerOrientChange={handleStickerOrientChange}
               editMode={isPattern ? editMode : "face"}
               showColorIndicator={!isPattern}
               showFaceLetter={isPattern}
@@ -560,15 +412,13 @@ export function PatternInput() {
 
       <ActionBar
         actions={[
-          { label: "修改分配", icon: RotateCcw, onClick: handleBackToAssign, variant: "outline" },
+          { label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
           { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting },
         ]}
       />
     </CubePreviewLayout>
   );
 }
-
-const ORIENTATION_LABELS = ["0°", "90°", "180°", "270°"];
 
 /**
  * Display the sticker thumbnails with color indicators in a cube net layout.
@@ -579,7 +429,6 @@ function PatternStickerGrid({
   stickerOrientations,
   size,
   onStickerClick,
-  onStickerOrientChange,
   editMode = "face",
   showColorIndicator = true,
   showFaceLetter = false,
@@ -589,7 +438,6 @@ function PatternStickerGrid({
   stickerOrientations?: StickerOrientations;
   size: number;
   onStickerClick: (faceIdx: number, pos: number) => void;
-  onStickerOrientChange?: (faceIdx: number, pos: number) => void;
   editMode?: "face" | "orientation";
   showColorIndicator?: boolean;
   showFaceLetter?: boolean;
@@ -624,7 +472,7 @@ function PatternStickerGrid({
                     : "border-border/30 hover:border-primary/50"
                 )}
                 style={cellStyle}
-                onClick={() => isOrientationMode ? onStickerOrientChange?.(faceIdx, i) : onStickerClick(faceIdx, i)}
+                onClick={() => onStickerClick(faceIdx, i)}
               >
                 {stickerUrl ? (
                   <img

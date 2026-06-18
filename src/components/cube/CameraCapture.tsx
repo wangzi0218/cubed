@@ -10,6 +10,8 @@ interface CameraCaptureProps {
   faceIndex: number;
   totalFaces: number;
   onSwitchCamera?: () => void;
+  faceLetter?: string;
+  faceHint?: string;
 }
 
 export function CameraCapture({
@@ -18,6 +20,8 @@ export function CameraCapture({
   faceIndex,
   totalFaces,
   onSwitchCamera,
+  faceLetter,
+  faceHint,
 }: CameraCaptureProps) {
   const { videoRef, stream, error, isReady, captureFrame, switchCamera, retry } =
     useCamera();
@@ -113,10 +117,17 @@ export function CameraCapture({
 
         {/* Face label — hidden during preview */}
         {!capturedFrame && (
-          <div className="absolute top-4 left-0 right-0 text-center z-10">
+          <div className="absolute top-4 left-0 right-0 text-center z-10 space-y-1">
             <span className="bg-black/60 text-white text-sm px-4 py-1.5 rounded-full">
-              拍摄第 {faceIndex + 1} 面：{faceLabel}
+              {faceLetter
+                ? `请拍摄${faceLabel}`
+                : `拍摄第 ${faceIndex + 1} 面：${faceLabel}`}
             </span>
+            {faceHint && (
+              <span className="block bg-black/50 text-white/80 text-xs px-3 py-1 rounded-full">
+                {faceHint}
+              </span>
+            )}
           </div>
         )}
 
