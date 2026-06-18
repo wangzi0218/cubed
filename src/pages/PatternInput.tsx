@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Image, Palette, RotateCcw, Zap } from "lucide-react";
+import { Camera, Image, Palette, RotateCcw, RotateCw, Zap } from "lucide-react";
 import { CameraCapture } from "@/components/cube/CameraCapture";
 import { CubePreviewLayout } from "@/components/layout/CubePreviewLayout";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -12,7 +12,7 @@ import { useSolve } from "@/hooks/useSolve";
 import { imageDataToDataUrl, classifyStickerColor } from "@/lib/image-utils";
 import { createSolvedState } from "@/lib/cube-state";
 import { ColorPalette } from "@/components/cube/CubeNet";
-import { extractFaceStickersFromDataUrl } from "@/lib/pattern-extraction";
+import { extractFaceStickersFromDataUrl, applyRotation } from "@/lib/pattern-extraction";
 import type { FacePhoto } from "@/lib/pattern-extraction";
 import { cn } from "@/lib/utils";
 import {
@@ -43,6 +43,7 @@ export function PatternInput() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [cubeVariant, setCubeVariant] = useState<CubeVariant>("standard");
   const [photos, setPhotos] = useState<(FacePhoto | null)[]>(() => Array(6).fill(null));
+  const [photoRotations, setPhotoRotations] = useState<(0 | 90 | 180 | 270)[]>(() => Array(6).fill(0));
   const [captureIdx, setCaptureIdx] = useState(0);
   const [stickers, setStickers] = useState<(string[] | null)[]>(
     () => Array(6).fill(null)
@@ -87,7 +88,7 @@ export function PatternInput() {
         if (!photo) continue;
         try {
           const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true);
-          results[i] = raw;
+          results[i] = applyRotation(raw, cubeSize, photoRotations[i]);
 
           if (cubeVariant === "standard") {
             for (let j = 0; j < stickersPerFace; j++) {
@@ -110,7 +111,7 @@ export function PatternInput() {
     }
     extractAll();
     return () => { cancelled = true; };
-  }, [phase, photos, cubeSize, cubeVariant]);
+  }, [phase, photos, photoRotations, cubeSize, cubeVariant]);
 
   // ── Capture handler ────────────────────────────────────────────────────
   const handleCapture = useCallback(
@@ -134,6 +135,14 @@ export function PatternInput() {
   const handleRetakePhoto = useCallback((idx: number) => {
     setCaptureIdx(idx);
     setPhase("capture");
+  }, []);
+
+  const handleRotatePhoto = useCallback((idx: number) => {
+    setPhotoRotations((prev) => {
+      const next = [...prev];
+      next[idx] = ((next[idx] + 90) % 360) as 0 | 90 | 180 | 270;
+      return next;
+    });
   }, []);
 
   // ── Sticker click: set color (standard) or orientation (pattern) ──────
@@ -280,27 +289,42 @@ export function PatternInput() {
             <div className="flex items-center gap-2 justify-center">
               <span className="text-xs text-muted-foreground mr-2">已拍摄：</span>
               {photos.map((photo, i) => (
-                <button
-                  key={i}
-                  className={cn(
-                    "w-12 h-12 rounded border-2 overflow-hidden transition-all",
-                    i === captureIdx
-                      ? "border-primary ring-2 ring-primary/30"
-                      : photo
-                        ? "border-border hover:border-primary/50"
-                        : "border-border/50 opacity-40"
+                <div key={i} className="relative group">
+                  <button
+                    className={cn(
+                      "w-12 h-12 rounded border-2 overflow-hidden transition-all",
+                      i === captureIdx
+                        ? "border-primary ring-2 ring-primary/30"
+                        : photo
+                          ? "border-border hover:border-primary/50"
+                          : "border-border/50 opacity-40"
+                    )}
+                    onClick={() => photo && handleRetakePhoto(i)}
+                    title={photo ? `重拍${FACE_CHINESE[FACE_ORDER[i]]}面` : `${FACE_CHINESE[FACE_ORDER[i]]}面未拍摄`}
+                  >
+                    {photo ? (
+                      <img
+                        src={photo.dataUrl}
+                        alt={FACE_CHINESE[FACE_ORDER[i]]}
+                        className="w-full h-full object-cover"
+                        style={{ transform: `rotate(${photoRotations[i]}deg)` }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                        {FACE_CHINESE[FACE_ORDER[i]]}
+                      </div>
+                    )}
+                  </button>
+                  {photo && (
+                    <button
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); handleRotatePhoto(i); }}
+                      title="旋转 90°"
+                    >
+                      <RotateCw className="w-3 h-3" />
+                    </button>
                   )}
-                  onClick={() => photo && handleRetakePhoto(i)}
-                  title={photo ? `重拍${FACE_CHINESE[FACE_ORDER[i]]}面` : `${FACE_CHINESE[FACE_ORDER[i]]}面未拍摄`}
-                >
-                  {photo ? (
-                    <img src={photo.dataUrl} alt={FACE_CHINESE[FACE_ORDER[i]]} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                      {FACE_CHINESE[FACE_ORDER[i]]}
-                    </div>
-                  )}
-                </button>
+                </div>
               ))}
             </div>
           </div>
