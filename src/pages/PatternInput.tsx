@@ -390,89 +390,11 @@ export function PatternInput() {
             </div>
           )}
 
-          {/* 2D Grid - main editing area */}
-          <div className="flex-1">
-            {extracting ? (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
-              </div>
-            ) : selectedFaceIdx >= 0 ? (
-              <div className="overflow-x-auto">
-                <SingleFaceGrid
-                  stickers={stickers[selectedFaceIdx]}
-                  faceIdx={selectedFaceIdx}
-                  faceColor={selectedFace!}
-                  stickerColors={stickerColors}
-                  stickerOrientations={isPattern ? stickerOrientations : undefined}
-                  size={cubeSize}
-                  onStickerClick={isPattern ? handleStickerAction : handleStickerClick}
-                  showColorIndicator={!isPattern}
-                  showFaceLetter={isPattern}
-                />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <PatternStickerGrid
-                  stickers={stickers}
-                  stickerColors={stickerColors}
-                  stickerOrientations={isPattern ? stickerOrientations : undefined}
-                  size={cubeSize}
-                  onStickerClick={isPattern ? handleStickerAction : handleStickerClick}
-                  showColorIndicator={!isPattern}
-                  showFaceLetter={isPattern}
-                />
-              </div>
-            )}
+          {/* Simple confirm content */}
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
+            <p className="text-lg font-medium">已拍摄 {capturedCount} 张照片</p>
+            <p className="text-sm text-muted-foreground">确认页面（极简版）</p>
           </div>
-
-          {/* Face selection buttons */}
-          <div className="flex gap-2 flex-wrap justify-center">
-            {FACE_ORDER.map((face) => (
-              <Button
-                key={face}
-                size="sm"
-                variant={selectedFace === face ? "default" : "outline"}
-                onClick={() => setSelectedFace(selectedFace === face ? null : face)}
-              >
-                {FACE_CHINESE[face]}
-              </Button>
-            ))}
-          </div>
-
-          {/* Sticker action popup */}
-          {stickerActionFace !== null && isPattern && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); }}>
-              <div className="bg-card rounded-xl p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-                <p className="text-sm font-medium text-center">贴纸操作</p>
-                <p className="text-xs text-muted-foreground text-center">
-                  {FACE_CHINESE[FACE_ORDER[stickerActionFace]]}面 第 {(stickerActionPos ?? 0) + 1} 格
-                </p>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" onClick={handleRotateSticker}>
-                    旋转方向（90°）
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center">移动到：</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {FACE_ORDER.map((face, idx) => (
-                      <Button
-                        key={face}
-                        variant="outline"
-                        size="sm"
-                        disabled={idx === stickerActionFace}
-                        onClick={() => handleMoveSticker(idx)}
-                      >
-                        {FACE_CHINESE[face]}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <Button variant="ghost" className="w-full" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); }}>
-                  取消
-                </Button>
-              </div>
-            </div>
-          )}
 
           {error && <ErrorMessage message={error} />}
 
