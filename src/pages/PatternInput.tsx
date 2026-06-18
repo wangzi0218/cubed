@@ -209,6 +209,7 @@ export function PatternInput() {
     setExtracting(false);
     setStickerColors(createSolvedState(cubeSize));
     setStickerOrientations(createInitialOrientations(cubeSize));
+    setEditMode("face");
     clearError();
   }, [clearError, cubeSize]);
 
@@ -216,8 +217,24 @@ export function PatternInput() {
     setPhase("assign");
     setStickers(Array(6).fill(null));
     setExtracting(false);
+    setEditMode("face");
     clearError();
   }, [clearError]);
+
+  const [editMode, setEditMode] = useState<"face" | "orientation">("face");
+
+  const handleStickerOrientChange = useCallback(
+    (faceIdx: number, pos: number) => {
+      const stickersPerFace = cubeSize * cubeSize;
+      const idx = faceIdx * stickersPerFace + pos;
+      setStickerOrientations((prev) => {
+        const next = [...prev];
+        next[idx] = ((prev[idx] ?? 0) + 1) % 4;
+        return next;
+      });
+    },
+    [cubeSize]
+  );
 
   const handleCenterOrientationChange = useCallback(
     (faceIdx: number, value: number) => {
@@ -334,7 +351,7 @@ export function PatternInput() {
                   onClick={() => handleRetakePhoto(i)}
                   title={`重拍第 ${i + 1} 面`}
                 >
-                  <img src={photo.dataUrl} alt={`Face ${i + 1}`} className="w-full h-full object-cover" />
+                  <img src={photo.dataUrl} alt={`第 ${i + 1} 面`} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -424,9 +441,14 @@ export function PatternInput() {
                   已分配 {assignments.filter((a) => a !== null).length} / 6 面
                 </p>
                 <div className="flex gap-3">
-                  <Button variant="outline" className="gap-2" onClick={handleRestart}>
+                  <Button variant="outline" className="gap-2" onClick={() => {
+                    setAssignments(Array(6).fill(null));
+                  }}>
                     <RotateCcw className="w-4 h-4" />
-                    重来
+                    重新分配
+                  </Button>
+                  <Button variant="outline" className="gap-2" onClick={handleRestart}>
+                    重新拍摄
                   </Button>
                   <Button
                     className="gap-2"
@@ -462,20 +484,45 @@ export function PatternInput() {
       stickerImages={stickerImages}
       stickerOrientations={isPattern ? stickerOrientations : undefined}
     >
+      {isPattern && (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={editMode === "face" ? "default" : "outline"}
+            onClick={() => setEditMode("face")}
+          >
+            标注面标识
+          </Button>
+          <Button
+            size="sm"
+            variant={editMode === "orientation" ? "default" : "outline"}
+            onClick={() => setEditMode("orientation")}
+          >
+            标注方向
+          </Button>
+        </div>
+      )}
+
       <div>
         <p className="text-sm font-medium mb-2">
-          {isPattern ? "分配面标识" : "修正颜色"}
+          {isPattern
+            ? editMode === "face" ? "分配面标识" : "标注图案方向"
+            : "修正颜色"}
         </p>
         <p className="text-xs text-muted-foreground mb-3">
           {isPattern
-            ? "选择一个面标识，再点击贴纸分配。根据贴纸图案判断它属于哪个面。"
+            ? editMode === "face"
+              ? "选择一个面标识，再点击贴纸分配。根据贴纸图案判断它属于哪个面。"
+              : "点击贴纸旋转图案方向，每点一次转 90°。让图案朝向与实物一致。"
             : "先选颜色，再点击格子修正。参考左侧图片贴纸确认颜色。"}
         </p>
-        <ColorPalette
-          selectedColor={selectedColor}
-          onSelect={setSelectedColor}
-          showFaceLabel={isPattern}
-        />
+        {editMode === "face" && (
+          <ColorPalette
+            selectedColor={selectedColor}
+            onSelect={setSelectedColor}
+            showFaceLabel={isPattern}
+          />
+        )}
       </div>
 
       {isPattern && !extracting && stickers.some((s) => s !== null) && (
@@ -497,8 +544,11 @@ export function PatternInput() {
             <PatternStickerGrid
               stickers={stickers}
               stickerColors={stickerColors}
+              stickerOrientations={isPattern ? stickerOrientations : undefined}
               size={cubeSize}
               onStickerClick={handleStickerClick}
+              onStickerOrientChange={handleStickerOrientChange}
+              editMode={isPattern ? editMode : "face"}
               showColorIndicator={!isPattern}
               showFaceLetter={isPattern}
             />
@@ -518,21 +568,29 @@ export function PatternInput() {
   );
 }
 
+const ORIENTATION_LABELS = ["0°", "90°", "180°", "270°"];
+
 /**
  * Display the sticker thumbnails with color indicators in a cube net layout.
  */
 function PatternStickerGrid({
   stickers,
   stickerColors,
+  stickerOrientations,
   size,
   onStickerClick,
+  onStickerOrientChange,
+  editMode = "face",
   showColorIndicator = true,
   showFaceLetter = false,
 }: {
   stickers: (string[] | null)[];
   stickerColors: CubeState;
+  stickerOrientations?: StickerOrientations;
   size: number;
   onStickerClick: (faceIdx: number, pos: number) => void;
+  onStickerOrientChange?: (faceIdx: number, pos: number) => void;
+  editMode?: "face" | "orientation";
   showColorIndicator?: boolean;
   showFaceLetter?: boolean;
 }) {
@@ -554,18 +612,26 @@ function PatternStickerGrid({
             const colorIdx = faceIdx * stickersPerFace + i;
             const color = stickerColors[colorIdx];
             const stickerUrl = faceStickers?.[i];
+            const orientation = stickerOrientations?.[colorIdx] ?? 0;
+            const isOrientationMode = editMode === "orientation";
             return (
               <button
                 key={i}
-                className="border border-border/30 rounded-sm overflow-hidden cursor-pointer transition-all hover:border-primary/50 hover:scale-105 relative"
+                className={cn(
+                  "border rounded-sm overflow-hidden cursor-pointer transition-all hover:scale-105 relative",
+                  isOrientationMode
+                    ? "border-primary/40 hover:border-primary"
+                    : "border-border/30 hover:border-primary/50"
+                )}
                 style={cellStyle}
-                onClick={() => onStickerClick(faceIdx, i)}
+                onClick={() => isOrientationMode ? onStickerOrientChange?.(faceIdx, i) : onStickerClick(faceIdx, i)}
               >
                 {stickerUrl ? (
                   <img
                     src={stickerUrl}
-                    alt={`Sticker ${i}`}
+                    alt={`贴纸 ${i}`}
                     className="w-full h-full object-cover"
+                    style={{ transform: `rotate(${orientation * 90}deg)` }}
                     draggable={false}
                   />
                 ) : (
@@ -589,6 +655,11 @@ function PatternStickerGrid({
                     }}
                   >
                     {FACE_CHINESE[color] ?? color}
+                  </span>
+                )}
+                {orientation > 0 && (
+                  <span className="absolute bottom-0 left-0 text-[7px] font-mono leading-none px-0.5 bg-black/70 text-white rounded-sm">
+                    {ORIENTATION_LABELS[orientation]}
                   </span>
                 )}
               </button>

@@ -2,8 +2,9 @@ import { useState, useCallback } from "react";
 import { useCubeStore } from "@/stores/cube-store";
 import { validateState } from "@/lib/cube-state";
 import { solveCube } from "@/lib/solver";
-import { FACE_ORDER, FACE_COLORS } from "@/types/cube";
+import { FACE_ORDER } from "@/types/cube";
 import type { CubeState, CubeSize, StickerOrientations } from "@/types/cube";
+import { createInitialOrientations } from "@/lib/sticker-orientation";
 
 const FACE_CHINESE: Record<string, string> = {
   U: "上白", R: "右红", F: "前蓝", D: "下黄", L: "左橙", B: "后绿",
@@ -50,9 +51,7 @@ export function useSolve(
     try {
       setCurrentState(state);
       setStickerImages(stickerImages);
-      if (stickerOrientations) {
-        storeSetOrientations(stickerOrientations);
-      }
+      storeSetOrientations(stickerOrientations ?? createInitialOrientations(size));
       const result = solveCube(state, size, stickerOrientations);
       setSolution(result.solution, result.steps);
       setAppStep("solution");

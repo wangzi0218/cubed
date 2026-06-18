@@ -8,21 +8,18 @@ const options = [
     icon: Box,
     title: "还原魔方",
     description: "拍摄或手动输入魔方状态，获取还原步骤",
-    available: true,
   },
   {
     id: "scramble",
     icon: Shuffle,
     title: "打乱魔方",
     description: "生成标准打乱公式",
-    available: true,
   },
   {
     id: "learn",
     icon: BookOpen,
     title: "学习还原",
     description: "分步教学，从零开始学魔方",
-    available: true,
   },
 ];
 
@@ -45,12 +42,8 @@ export function Home() {
         {options.map((opt) => (
           <Card
             key={opt.id}
-            className={
-              opt.available ? undefined : "opacity-50 cursor-not-allowed"
-            }
-            clickable={opt.available}
+            clickable
             onClick={() => {
-              if (!opt.available) return;
               if (opt.id === "solve") {
                 setFlowOrigin("solve");
                 setAppStep("cube-type");
@@ -71,6 +64,8 @@ export function Home() {
           </Card>
         ))}
       </div>
+
+      <p className="text-xs text-muted-foreground/50 mt-8">v0.2.0</p>
     </div>
   );
 }
