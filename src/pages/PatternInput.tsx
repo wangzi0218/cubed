@@ -122,7 +122,9 @@ export function PatternInput() {
   // Extraction
   const prevPhaseRef = useRef(phase);
   useEffect(() => {
+    console.log(`[PatternInput] effect: phase=${phase} prev=${prevPhaseRef.current} extracted=${extractedRef.current}`);
     if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
+      console.log('[PatternInput] STARTING extraction');
       prevPhaseRef.current = phase; extractedRef.current = true;
       let cancelled = false; setExtracting(true);
       (async () => {
