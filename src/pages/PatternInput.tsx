@@ -119,33 +119,42 @@ export const PatternInput = memo(function PatternInput() {
   const stickerImages = useMemo(() => { const f = stickers.flat(); return f.every((s) => s !== null) ? (f as string[]) : undefined; }, [stickers]);
   const { error, solve } = useSolve(stickerColors, cubeSize, stickerImages, isPattern ? stickerOrientations : undefined);
 
-  // Extraction
+  // Use refs to avoid re-triggering the extraction effect
+  const photosRef = useRef(photos);
+  const photoRotationsRef = useRef(photoRotations);
+  const cubeSizeRef = useRef(cubeSize);
+  const cubeVariantRef = useRef(cubeVariant);
+  useEffect(() => { photosRef.current = photos; }, [photos]);
+  useEffect(() => { photoRotationsRef.current = photoRotations; }, [photoRotations]);
+  useEffect(() => { cubeSizeRef.current = cubeSize; }, [cubeSize]);
+  useEffect(() => { cubeVariantRef.current = cubeVariant; }, [cubeVariant]);
+
+  // Extraction — only depends on phase, reads other values from refs
   const prevPhaseRef = useRef(phase);
   useEffect(() => {
-    console.log(`[PatternInput] effect: phase=${phase} prev=${prevPhaseRef.current} extracted=${extractedRef.current}`);
     if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
-      console.log('[PatternInput] STARTING extraction');
       prevPhaseRef.current = phase; extractedRef.current = true;
       let cancelled = false; setExtracting(true);
+      const p = photosRef.current, pr = photoRotationsRef.current, cs = cubeSizeRef.current, cv = cubeVariantRef.current;
       (async () => {
         const { extractFaceStickersFromDataUrl, applyRotation } = await import("@/lib/pattern-extraction");
         const { classifyStickerColor } = await import("@/lib/image-utils");
-        const spf = cubeSize * cubeSize;
+        const spf = cs * cs;
         const results: (string[] | null)[] = Array(6).fill(null);
-        const colors: FaceColor[] = createSolvedState(cubeSize);
+        const colors: FaceColor[] = createSolvedState(cs);
         for (let i = 0; i < 6; i++) {
-          const photo = photos[i]; if (!photo) continue;
+          const photo = p[i]; if (!photo) continue;
           try {
-            const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cubeSize, true, window.innerWidth, window.innerHeight);
-            results[i] = applyRotation(raw, cubeSize, photoRotations[i]);
-            if (cubeVariant === "standard") { for (let j = 0; j < spf; j++) { try { colors[i * spf + j] = await classifyStickerColor(raw[j]); } catch {} } }
+            const raw = await extractFaceStickersFromDataUrl(photo.dataUrl, cs, true, window.innerWidth, window.innerHeight);
+            results[i] = applyRotation(raw, cs, pr[i]);
+            if (cv === "standard") { for (let j = 0; j < spf; j++) { try { colors[i * spf + j] = await classifyStickerColor(raw[j]); } catch {} } }
           } catch { results[i] = null; }
         }
         if (!cancelled) { setStickers(results); setStickerColors(colors); setExtracting(false); }
       })();
       return () => { cancelled = true; };
     }
-  }, [phase, photos, photoRotations, cubeSize, cubeVariant]);
+  }, [phase]);
 
   // Callbacks (all with stable deps)
   const handleCapture = useCallback((imageData: ImageData) => {
