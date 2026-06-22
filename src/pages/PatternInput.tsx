@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef, memo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, Palette, RotateCcw, Zap, RotateCw } from "lucide-react";
 import { CubeViewer } from "@/components/cube/CubeViewer";
@@ -97,7 +97,7 @@ const SingleFaceGrid = memo(function SingleFaceGrid({
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-export const PatternInput = memo(function PatternInput() {
+export function PatternInput() {
   const { cubeSize } = useCubeStore();
   const [phase, setPhase] = useState<"intro" | "capture" | "confirm">("intro");
   const [cubeVariant, setCubeVariant] = useState<"standard" | "pattern">("standard");
@@ -338,4 +338,4 @@ export const PatternInput = memo(function PatternInput() {
       )}
     </div>
   );
-});
+}
