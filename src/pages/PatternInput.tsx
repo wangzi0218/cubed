@@ -195,6 +195,15 @@ export function PatternInput() {
     setHighlightedStickers([]);
   }, [stickerActionFace, stickerActionPos, cubeSize]);
 
+  const handle3DStickerClick = useCallback((stickerIndex: number) => {
+    const spf = cubeSize * cubeSize;
+    const faceIdx = Math.floor(stickerIndex / spf);
+    const pos = stickerIndex % spf;
+    setStickerActionFace(faceIdx);
+    setStickerActionPos(pos);
+    setHighlightedStickers(getRelatedStickers(stickerIndex, cubeSize));
+  }, [cubeSize]);
+
   // Stable callback references for memoized children
   const gridClick = isPattern ? handleStickerAction : handleStickerClick;
 
@@ -240,17 +249,11 @@ export function PatternInput() {
     );
   }
 
-  // ── 3D sticker click handler ───────────────────────────────────────────
-  const handle3DStickerClick = useCallback((stickerIndex: number) => {
-    const spf = cubeSize * cubeSize;
-    const faceIdx = Math.floor(stickerIndex / spf);
-    const pos = stickerIndex % spf;
-    setStickerActionFace(faceIdx);
-    setStickerActionPos(pos);
-    setHighlightedStickers(getRelatedStickers(stickerIndex, cubeSize));
-  }, [cubeSize]);
+  // ── Compute values ──────────────────────────────────────────────────────
+  const capturedCount = photos.filter((p) => p !== null).length;
+  const selectedFaceIdx = selectedFace !== null ? FACE_ORDER.indexOf(selectedFace) : -1;
 
-  // ── Confirm phase ──────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────
   const incompleteFaces = stickers.filter((s) => s === null || s.some((st) => st === null)).length;
 
   return (
