@@ -148,18 +148,18 @@ describe("extractFaceStickers", () => {
     expect(mockCtx.putImageData).toHaveBeenCalledWith(imageData, 0, 0);
   });
 
-  it("draws each cell with center 60% margin", () => {
+  it("draws each cell with center 84% margin", () => {
     const data = new Uint8ClampedArray(90 * 90 * 4);
     const imageData = { data, width: 90, height: 90 } as ImageData;
     extractFaceStickers(imageData, 3);
     // 3x3 grid: cellW = cellH = 30
-    // First cell (0,0): margin 0.2 → sx=6, sy=6, sw=18, sh=18
+    // First cell (0,0): margin 0.08 → sx=2, sy=2, sw=25, sh=25
     expect(mockCtx.drawImage).toHaveBeenCalled();
     const firstCall = mockCtx.drawImage.mock.calls[0];
-    expect(firstCall[1]).toBe(6);  // sx
-    expect(firstCall[2]).toBe(6);  // sy
-    expect(firstCall[3]).toBe(18); // sw
-    expect(firstCall[4]).toBe(18); // sh
+    expect(firstCall[1]).toBe(2);  // sx
+    expect(firstCall[2]).toBe(2);  // sy
+    expect(firstCall[3]).toBe(25); // sw
+    expect(firstCall[4]).toBe(25); // sh
   });
 
   it("clears output canvas before each cell draw", () => {

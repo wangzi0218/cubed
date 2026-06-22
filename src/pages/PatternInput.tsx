@@ -9,6 +9,7 @@ import { useCubeStore } from "@/stores/cube-store";
 import { useSolve } from "@/hooks/useSolve";
 import { createSolvedState } from "@/lib/cube-state";
 import { createInitialOrientations } from "@/lib/sticker-orientation";
+import { getRelatedStickers } from "@/lib/sticker-adjacency";
 import { FACE_ORDER } from "@/types/cube";
 import type { FaceColor, CubeState, StickerOrientations } from "@/types/cube";
 import type { FacePhoto } from "@/lib/pattern-extraction";
@@ -28,11 +29,11 @@ const ORIENT_LABELS = ["0°", "90°", "180°", "270°"];
 
 const PatternStickerGrid = memo(function PatternStickerGrid({
   stickers, stickerColors, stickerOrientations, size, onStickerClick,
-  showColorIndicator = true, showFaceLetter = false,
+  showColorIndicator = true, showFaceLetter = false, highlighted = [],
 }: {
   stickers: (string[] | null)[]; stickerColors: CubeState; stickerOrientations?: StickerOrientations;
   size: number; onStickerClick: (faceIdx: number, pos: number) => void;
-  showColorIndicator?: boolean; showFaceLetter?: boolean;
+  showColorIndicator?: boolean; showFaceLetter?: boolean; highlighted?: number[];
 }) {
   const cellStyle = size === 2 ? { width: "min(12vw, 3rem)", height: "min(12vw, 3rem)" } : { width: "min(10vw, 2.5rem)", height: "min(10vw, 2.5rem)" };
   const spf = size * size;
@@ -44,7 +45,7 @@ const PatternStickerGrid = memo(function PatternStickerGrid({
           {Array.from({ length: spf }).map((_, i) => {
             const ci = fi * spf + i, color = stickerColors[ci], url = fs?.[i], orient = stickerOrientations?.[ci] ?? 0;
             return (
-              <button key={i} className="border border-border/30 rounded-sm overflow-hidden cursor-pointer transition-all hover:scale-105 relative" style={cellStyle} onClick={() => onStickerClick(fi, i)}>
+              <button key={i} className={cn("border rounded-sm overflow-hidden cursor-pointer transition-all hover:scale-105 relative", highlighted.includes(ci) ? "border-primary ring-2 ring-primary/50" : "border-border/30")} style={cellStyle} onClick={() => onStickerClick(fi, i)}>
                 {url ? <img src={url} alt="" className="w-full h-full object-cover" style={{ transform: `rotate(${orient * 90}deg)` }} draggable={false} /> : <div className="w-full h-full" style={{ backgroundColor: FACE_COLORS_HEX[color] ?? "#888" }} />}
                 {showColorIndicator && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white/80" style={{ backgroundColor: FACE_COLORS_HEX[color] ?? "#888" }} />}
                 {showFaceLetter && <span className="absolute top-0 right-0 text-[8px] font-bold leading-none px-0.5 rounded-sm" style={{ backgroundColor: FACE_COLORS_HEX[color] ?? "#888", color: color === "U" ? "#000" : "#fff" }}>{FACE_CHINESE[color] ?? color}</span>}
@@ -109,6 +110,7 @@ export function PatternInput() {
   const [selectedFace, setSelectedFace] = useState<FaceColor | null>(null);
   const [stickerActionFace, setStickerActionFace] = useState<number | null>(null);
   const [stickerActionPos, setStickerActionPos] = useState<number | null>(null);
+  const [highlightedStickers, setHighlightedStickers] = useState<number[]>([]);
 
   const isPattern = cubeVariant === "pattern";
   const stickerImages = useMemo(() => { const f = stickers.flat(); return f.every((s) => s !== null) ? (f as string[]) : undefined; }, [stickers]);
@@ -155,7 +157,12 @@ export function PatternInput() {
     if (isPattern) { const idx = faceIdx * cubeSize * cubeSize + pos; setStickerOrientations((p) => { const n = [...p]; n[idx] = ((p[idx] ?? 0) + 1) % 4; return n; }); }
   }, [cubeSize, isPattern]);
 
-  const handleStickerAction = useCallback((faceIdx: number, pos: number) => { setStickerActionFace(faceIdx); setStickerActionPos(pos); }, []);
+  const handleStickerAction = useCallback((faceIdx: number, pos: number) => {
+    const idx = faceIdx * cubeSize * cubeSize + pos;
+    setStickerActionFace(faceIdx);
+    setStickerActionPos(pos);
+    setHighlightedStickers(getRelatedStickers(idx, cubeSize));
+  }, [cubeSize]);
 
   const handleMoveSticker = useCallback((target: number) => {
     if (stickerActionFace === null || stickerActionPos === null) return;
@@ -169,9 +176,20 @@ export function PatternInput() {
 
   const handleRotateSticker = useCallback(() => {
     if (stickerActionFace === null || stickerActionPos === null) return;
-    handleStickerClick(stickerActionFace, stickerActionPos);
-    setStickerActionFace(null); setStickerActionPos(null);
-  }, [stickerActionFace, stickerActionPos, handleStickerClick]);
+    // Batch rotate: update all related stickers on the same piece
+    const idx = stickerActionFace * cubeSize * cubeSize + stickerActionPos;
+    const related = getRelatedStickers(idx, cubeSize);
+    setStickerOrientations((prev) => {
+      const next = [...prev];
+      for (const ri of related) {
+        next[ri] = ((prev[ri] ?? 0) + 1) % 4;
+      }
+      return next;
+    });
+    setStickerActionFace(null);
+    setStickerActionPos(null);
+    setHighlightedStickers([]);
+  }, [stickerActionFace, stickerActionPos, cubeSize]);
 
   // Stable callback references for memoized children
   const gridClick = isPattern ? handleStickerAction : handleStickerClick;
@@ -227,13 +245,13 @@ export function PatternInput() {
           <p className="text-sm text-muted-foreground">{extracting ? "正在提取贴纸图案..." : isPattern ? "对照实物，点击贴纸旋转方向或移动到其他面。" : "先选颜色，再点击格子修正。"}</p>
           {!extracting && (selectedFaceIdx >= 0
             ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
-            : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} />
+            : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} highlighted={highlightedStickers} />
           )}
           <div className="flex gap-2 flex-wrap justify-center">
             {FACE_ORDER.map((f) => <Button key={f} size="sm" variant={selectedFace === f ? "default" : "outline"} onClick={() => setSelectedFace(selectedFace === f ? null : f)}>{FACE_CHINESE[f]}</Button>)}
           </div>
           {stickerActionFace !== null && isPattern && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); }}>
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>
               <div className="bg-card rounded-xl p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
                 <p className="text-sm font-medium text-center">贴纸操作</p>
                 <p className="text-xs text-muted-foreground text-center">{FACE_CHINESE[FACE_ORDER[stickerActionFace]]}面 第 {(stickerActionPos ?? 0) + 1} 格</p>
@@ -244,7 +262,7 @@ export function PatternInput() {
                     {FACE_ORDER.map((f, i) => <Button key={f} variant="outline" size="sm" disabled={i === stickerActionFace} onClick={() => handleMoveSticker(i)}>{FACE_CHINESE[f]}</Button>)}
                   </div>
                 </div>
-                <Button variant="ghost" className="w-full" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); }}>取消</Button>
+                <Button variant="ghost" className="w-full" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>取消</Button>
               </div>
             </div>
           )}
