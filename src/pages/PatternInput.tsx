@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef, memo } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Image, Palette, RotateCcw, Zap } from "lucide-react";
+import { Camera, Image, Palette, RotateCcw, Zap, RotateCw } from "lucide-react";
+import { CubeViewer } from "@/components/cube/CubeViewer";
 import { CameraCapture } from "@/components/cube/CameraCapture";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ActionBar } from "@/components/layout/ActionBar";
@@ -166,16 +167,6 @@ export function PatternInput() {
     setHighlightedStickers(getRelatedStickers(idx, cubeSize));
   }, [cubeSize]);
 
-  const handleMoveSticker = useCallback((target: number) => {
-    if (stickerActionFace === null || stickerActionPos === null) return;
-    if (stickerActionFace === target) { setStickerActionFace(null); setStickerActionPos(null); return; }
-    const spf = cubeSize * cubeSize, si = stickerActionFace * spf + stickerActionPos, ti = target * spf + stickerActionPos;
-    setStickers((p) => { const n = [...p], s = [...(n[stickerActionFace!] ?? [])], t = [...(n[target] ?? [])], tmp = s[stickerActionPos!]; s[stickerActionPos!] = t[stickerActionPos!]; t[stickerActionPos!] = tmp; n[stickerActionFace!] = s; n[target] = t; return n; });
-    setStickerColors((p) => { const n = [...p]; const tmp = n[si]; n[si] = n[ti]; n[ti] = tmp; return n; });
-    setStickerOrientations((p) => { const n = [...p]; const tmp = n[si]; n[si] = n[ti]; n[ti] = tmp; return n; });
-    setStickerActionFace(null); setStickerActionPos(null);
-  }, [stickerActionFace, stickerActionPos, cubeSize]);
-
   const handleRotateSticker = useCallback(() => {
     if (stickerActionFace === null || stickerActionPos === null) return;
     // Batch rotate: update all related stickers on the same piece
@@ -238,70 +229,102 @@ export function PatternInput() {
     );
   }
 
+  // ── 3D sticker click handler ───────────────────────────────────────────
+  const handle3DStickerClick = useCallback((stickerIndex: number) => {
+    const spf = cubeSize * cubeSize;
+    const faceIdx = Math.floor(stickerIndex / spf);
+    const pos = stickerIndex % spf;
+    setStickerActionFace(faceIdx);
+    setStickerActionPos(pos);
+    setHighlightedStickers(getRelatedStickers(stickerIndex, cubeSize));
+  }, [cubeSize]);
+
   // ── Confirm phase ──────────────────────────────────────────────────────
   const incompleteFaces = stickers.filter((s) => s === null || s.some((st) => st === null)).length;
 
   return (
     <div className="flex-1 flex flex-col">
       <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
-        <PageHeader title={`${cubeSize}×${cubeSize} 确认状态`} onBack={handleBackToCapture} />
-        <div className="flex-1 flex flex-col gap-4">
-          {/* Instructions */}
-          {isPattern ? (
-            <div>
-              <p className="text-sm font-medium">确认贴纸方向</p>
-              <p className="text-xs text-muted-foreground">
-                系统已根据拍摄顺序自动分配面标识。对照实物，点击贴纸调整图案方向。
-                {highlightedStickers.length > 0 && " 同一块上的贴纸会自动联动更新。"}
-              </p>
+        <PageHeader title="确认魔方状态" onBack={handleBackToCapture} />
+        <div className="flex-1 flex flex-col lg:flex-row gap-6">
+          {/* Left: 3D cube (main view) */}
+          <div className="flex-1 flex flex-col items-center">
+            <div className="w-full max-w-md aspect-square rounded-xl border bg-card/50 overflow-hidden">
+              {extracting ? (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
+                </div>
+              ) : (
+                <CubeViewer
+                  state={stickerColors}
+                  size={cubeSize}
+                  stickerImages={stickerImages}
+                  stickerOrientations={isPattern ? stickerOrientations : undefined}
+                  onStickerClick={isPattern ? handle3DStickerClick : undefined}
+                />
+              )}
             </div>
-          ) : (
-            <div>
-              <p className="text-sm font-medium">修正颜色</p>
-              <p className="text-xs text-muted-foreground">先选颜色，再点击格子修正。</p>
-              <ColorPalette selectedColor={selectedColor} onSelect={setSelectedColor} />
-            </div>
-          )}
-
-          {/* Grid */}
-          {!extracting && (selectedFaceIdx >= 0
-            ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
-            : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} highlighted={highlightedStickers} />
-          )}
-
-          {/* Face selection buttons */}
-          <div className="flex gap-2 flex-wrap justify-center">
-            {FACE_ORDER.map((f) => <Button key={f} size="sm" variant={selectedFace === f ? "default" : "outline"} onClick={() => setSelectedFace(selectedFace === f ? null : f)}>{FACE_CHINESE[f]}</Button>)}
+            <p className="text-xs text-muted-foreground mt-2">拖拽旋转查看，点击贴纸调整</p>
           </div>
 
-          {/* Sticker action popup */}
-          {stickerActionFace !== null && isPattern && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>
-              <div className="bg-card rounded-xl p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-                <p className="text-sm font-medium text-center">调整贴纸</p>
-                <p className="text-xs text-muted-foreground text-center">{FACE_CHINESE[FACE_ORDER[stickerActionFace]]}面 第 {(stickerActionPos ?? 0) + 1} 格</p>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" onClick={handleRotateSticker}>旋转方向（90°）</Button>
-                  <p className="text-xs text-muted-foreground text-center">移动到：</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {FACE_ORDER.map((f, i) => <Button key={f} variant="outline" size="sm" disabled={i === stickerActionFace} onClick={() => handleMoveSticker(i)}>{FACE_CHINESE[f]}</Button>)}
-                  </div>
-                </div>
-                <Button variant="ghost" className="w-full" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>取消</Button>
+          {/* Right: detail panel */}
+          <div className="lg:w-72 shrink-0 flex flex-col gap-4">
+            {/* Instructions */}
+            {isPattern ? (
+              <div>
+                <p className="text-sm font-medium">确认图案</p>
+                <p className="text-xs text-muted-foreground">
+                  对照实物魔方，检查贴纸是否正确。点击 3D 魔方或展开图上的贴纸进行调整。
+                </p>
               </div>
+            ) : (
+              <div>
+                <p className="text-sm font-medium">修正颜色</p>
+                <p className="text-xs text-muted-foreground">先选颜色，再点击格子修正。</p>
+                <ColorPalette selectedColor={selectedColor} onSelect={setSelectedColor} />
+              </div>
+            )}
+
+            {/* Grid */}
+            {!extracting && (selectedFaceIdx >= 0
+              ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
+              : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} highlighted={highlightedStickers} />
+            )}
+
+            {/* Face selection buttons */}
+            <div className="flex gap-2 flex-wrap justify-center">
+              {FACE_ORDER.map((f) => <Button key={f} size="sm" variant={selectedFace === f ? "default" : "outline"} onClick={() => setSelectedFace(selectedFace === f ? null : f)}>{FACE_CHINESE[f]}</Button>)}
             </div>
-          )}
-
-          {error && <ErrorMessage message={error} />}
-
-          {incompleteFaces > 0 && <p className="text-xs text-muted-foreground text-center">提示：有 {incompleteFaces} 个面的贴纸尚未提取完成</p>}
-
-          <ActionBar actions={[
-            { label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
-            { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting || incompleteFaces > 0 },
-          ]} />
+          </div>
         </div>
+
+        {error && <ErrorMessage message={error} />}
+        {incompleteFaces > 0 && <p className="text-xs text-muted-foreground text-center">有 {incompleteFaces} 个面的贴纸尚未提取完成</p>}
+
+        <ActionBar actions={[
+          { label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
+          { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting || incompleteFaces > 0 },
+        ]} />
       </div>
+
+      {/* Simplified sticker action popup */}
+      {stickerActionFace !== null && isPattern && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>
+          <div className="bg-card rounded-xl p-6 max-w-xs w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm font-medium text-center">调整贴纸</p>
+            <p className="text-xs text-muted-foreground text-center">
+              {FACE_CHINESE[FACE_ORDER[stickerActionFace]]}面 · 第 {(stickerActionPos ?? 0) + 1} 格
+            </p>
+            <Button variant="outline" className="w-full gap-2" onClick={handleRotateSticker}>
+              <RotateCw className="w-4 h-4" /> 旋转 90°
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>
+              取消
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
