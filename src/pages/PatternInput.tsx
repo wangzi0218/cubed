@@ -249,10 +249,6 @@ export function PatternInput() {
     );
   }
 
-  // ── Compute values ──────────────────────────────────────────────────────
-  const capturedCount = photos.filter((p) => p !== null).length;
-  const selectedFaceIdx = selectedFace !== null ? FACE_ORDER.indexOf(selectedFace) : -1;
-
   // ── Render ──────────────────────────────────────────────────────────────
   const incompleteFaces = stickers.filter((s) => s === null || s.some((st) => st === null)).length;
 
