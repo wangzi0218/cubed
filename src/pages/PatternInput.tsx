@@ -12,6 +12,7 @@ import { createInitialOrientations } from "@/lib/sticker-orientation";
 import { getRelatedStickers } from "@/lib/sticker-adjacency";
 import { FACE_ORDER } from "@/types/cube";
 import type { FaceColor, CubeState, StickerOrientations } from "@/types/cube";
+import { ColorPalette } from "@/components/cube/CubeNet";
 import type { FacePhoto } from "@/lib/pattern-extraction";
 import { imageDataToDataUrl } from "@/lib/image-utils";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,7 @@ export function PatternInput() {
   const [stickerActionFace, setStickerActionFace] = useState<number | null>(null);
   const [stickerActionPos, setStickerActionPos] = useState<number | null>(null);
   const [highlightedStickers, setHighlightedStickers] = useState<number[]>([]);
+  const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
 
   const isPattern = cubeVariant === "pattern";
   const stickerImages = useMemo(() => { const f = stickers.flat(); return f.every((s) => s !== null) ? (f as string[]) : undefined; }, [stickers]);
@@ -203,7 +205,7 @@ export function PatternInput() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg text-center space-y-8">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto"><Image className="w-8 h-8 text-primary" /></div>
-          <div className="space-y-3"><h3 className="text-lg font-semibold">图案识别</h3><p className="text-muted-foreground text-sm">拍摄魔方 6 个面，系统提取贴纸图案后求解。</p></div>
+          <div className="space-y-3"><h3 className="text-lg font-semibold">图案识别</h3><p className="text-muted-foreground text-sm">拍摄魔方 6 个面，系统自动提取贴纸并分配到对应面，确认后求解。</p></div>
           <div className="grid grid-cols-2 gap-4 text-left">
             <button className={cn("p-4 rounded-xl border-2 transition-all cursor-pointer hover:scale-[1.02]", cubeVariant === "standard" ? "border-primary bg-primary/5" : "border-border")} onClick={() => setCubeVariant("standard")}><Palette className="w-6 h-6 text-primary mb-2" /><p className="text-sm font-semibold">标准配色</p></button>
             <button className={cn("p-4 rounded-xl border-2 transition-all cursor-pointer hover:scale-[1.02]", cubeVariant === "pattern" ? "border-primary bg-primary/5" : "border-border")} onClick={() => setCubeVariant("pattern")}><Image className="w-6 h-6 text-primary mb-2" /><p className="text-sm font-semibold">图案魔方</p></button>
@@ -237,23 +239,46 @@ export function PatternInput() {
   }
 
   // ── Confirm phase ──────────────────────────────────────────────────────
+  const incompleteFaces = stickers.filter((s) => s === null || s.some((st) => st === null)).length;
+
   return (
     <div className="flex-1 flex flex-col">
       <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
         <PageHeader title={`${cubeSize}×${cubeSize} 确认状态`} onBack={handleBackToCapture} />
         <div className="flex-1 flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">{extracting ? "正在提取贴纸图案..." : isPattern ? "对照实物，点击贴纸旋转方向或移动到其他面。" : "先选颜色，再点击格子修正。"}</p>
+          {/* Instructions */}
+          {isPattern ? (
+            <div>
+              <p className="text-sm font-medium">确认贴纸方向</p>
+              <p className="text-xs text-muted-foreground">
+                系统已根据拍摄顺序自动分配面标识。对照实物，点击贴纸调整图案方向。
+                {highlightedStickers.length > 0 && " 同一块上的贴纸会自动联动更新。"}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-medium">修正颜色</p>
+              <p className="text-xs text-muted-foreground">先选颜色，再点击格子修正。</p>
+              <ColorPalette selectedColor={selectedColor} onSelect={setSelectedColor} />
+            </div>
+          )}
+
+          {/* Grid */}
           {!extracting && (selectedFaceIdx >= 0
             ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
             : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} highlighted={highlightedStickers} />
           )}
+
+          {/* Face selection buttons */}
           <div className="flex gap-2 flex-wrap justify-center">
             {FACE_ORDER.map((f) => <Button key={f} size="sm" variant={selectedFace === f ? "default" : "outline"} onClick={() => setSelectedFace(selectedFace === f ? null : f)}>{FACE_CHINESE[f]}</Button>)}
           </div>
+
+          {/* Sticker action popup */}
           {stickerActionFace !== null && isPattern && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>
               <div className="bg-card rounded-xl p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-                <p className="text-sm font-medium text-center">贴纸操作</p>
+                <p className="text-sm font-medium text-center">调整贴纸</p>
                 <p className="text-xs text-muted-foreground text-center">{FACE_CHINESE[FACE_ORDER[stickerActionFace]]}面 第 {(stickerActionPos ?? 0) + 1} 格</p>
                 <div className="flex flex-col gap-2">
                   <Button variant="outline" onClick={handleRotateSticker}>旋转方向（90°）</Button>
@@ -266,8 +291,15 @@ export function PatternInput() {
               </div>
             </div>
           )}
+
           {error && <ErrorMessage message={error} />}
-          <ActionBar actions={[{ label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" }, { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting }]} />
+
+          {incompleteFaces > 0 && <p className="text-xs text-muted-foreground text-center">提示：有 {incompleteFaces} 个面的贴纸尚未提取完成</p>}
+
+          <ActionBar actions={[
+            { label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
+            { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting || incompleteFaces > 0 },
+          ]} />
         </div>
       </div>
     </div>
