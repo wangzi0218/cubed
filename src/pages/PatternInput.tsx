@@ -97,7 +97,7 @@ const SingleFaceGrid = memo(function SingleFaceGrid({
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-export function PatternInput() {
+export const PatternInput = memo(function PatternInput() {
   const { cubeSize } = useCubeStore();
   const [phase, setPhase] = useState<"intro" | "capture" | "confirm">("intro");
   const [cubeVariant, setCubeVariant] = useState<"standard" | "pattern">("standard");
@@ -329,4 +329,4 @@ export function PatternInput() {
       )}
     </div>
   );
-}
+});
