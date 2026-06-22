@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, Palette, RotateCcw, Zap, RotateCw } from "lucide-react";
 import { CubeViewer } from "@/components/cube/CubeViewer";
