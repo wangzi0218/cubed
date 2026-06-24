@@ -24,6 +24,10 @@ const FACE_HINTS: Record<string, string> = {
   F: "蓝色面朝前，正对摄像头", D: "黄色面朝下，正对摄像头",
   L: "橙色面朝左，正对摄像头", B: "绿色面朝后，正对摄像头",
 };
+
+// Detect iOS Safari — WebGL sticker textures don't render properly
+const IS_IOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (typeof navigator !== "undefined" && navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const FACE_COLORS_HEX: Record<string, string> = { U: "#ffffff", R: "#b71234", F: "#0046ad", D: "#ffd500", L: "#ff5800", B: "#009b48" };
 const ORIENT_LABELS = ["0°", "90°", "180°", "270°"];
 
@@ -249,35 +253,41 @@ export function PatternInput() {
       <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1 flex flex-col">
         <PageHeader title="确认魔方状态" onBack={handleBackToCapture} />
         <div className="flex-1 flex flex-col lg:flex-row gap-6">
-          {/* Left: 3D cube (main view) */}
+          {/* Main view: 3D on desktop, 2D grid on iOS */}
           <div className="flex-1 flex flex-col items-center">
-            <div className="w-full max-w-md aspect-square rounded-xl border bg-card/50 overflow-hidden">
-              {extracting ? (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
-                </div>
-              ) : (
-                <CubeViewer
-                  state={stickerColors}
-                  size={cubeSize}
-                  stickerImages={stickerImages}
-                  stickerOrientations={isPattern ? stickerOrientations : undefined}
-                  onStickerClick={isPattern ? handle3DStickerClick : undefined}
-                />
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">拖拽旋转查看，点击贴纸调整</p>
+            {!IS_IOS ? (
+              <div className="w-full max-w-md aspect-square rounded-xl border bg-card/50 overflow-hidden">
+                {extracting ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-muted-foreground">正在提取贴纸图案...</p>
+                  </div>
+                ) : (
+                  <CubeViewer
+                    state={stickerColors}
+                    size={cubeSize}
+                    stickerImages={stickerImages}
+                    stickerOrientations={isPattern ? stickerOrientations : undefined}
+                    onStickerClick={isPattern ? handle3DStickerClick : undefined}
+                  />
+                )}
+              </div>
+            ) : (
+              !extracting && (selectedFaceIdx >= 0
+                ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
+                : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} highlighted={highlightedStickers} />
+              )
+            )}
+            {!IS_IOS && <p className="text-xs text-muted-foreground mt-2">拖拽旋转查看，点击贴纸调整</p>}
           </div>
 
-          {/* Right: detail panel */}
+          {/* Detail panel */}
           <div className="lg:w-72 shrink-0 flex flex-col gap-4">
-            {/* Instructions */}
             {isPattern ? (
               <div>
                 <p className="text-sm font-medium">确认图案</p>
                 <p className="text-xs text-muted-foreground">
-                  对照实物魔方，检查贴纸是否正确。点击 3D 魔方或展开图上的贴纸进行调整。
+                  对照实物，检查贴纸是否正确。点击贴纸调整。
                 </p>
               </div>
             ) : (
@@ -288,10 +298,14 @@ export function PatternInput() {
               </div>
             )}
 
-            {/* Grid */}
-            {!extracting && (selectedFaceIdx >= 0
-              ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
-              : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} highlighted={highlightedStickers} />
+            {/* Grid (shown on desktop as secondary view) */}
+            {!IS_IOS && !extracting && (
+              <div className="hidden lg:block">
+                {selectedFaceIdx >= 0
+                  ? <SingleFaceGrid stickers={stickers[selectedFaceIdx]} faceIdx={selectedFaceIdx} faceColor={selectedFace!} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} />
+                  : <PatternStickerGrid stickers={stickers} stickerColors={stickerColors} stickerOrientations={isPattern ? stickerOrientations : undefined} size={cubeSize} onStickerClick={gridClick} showColorIndicator={!isPattern} showFaceLetter={isPattern} highlighted={highlightedStickers} />
+                }
+              </div>
             )}
 
             {/* Face selection buttons */}
