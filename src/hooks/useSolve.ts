@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useCubeStore } from "@/stores/cube-store";
 import { validateState } from "@/lib/cube-state";
 import { solveCube } from "@/lib/solver";
@@ -42,17 +42,31 @@ export function useSolve(
   } = useCubeStore();
   const [error, setError] = useState<string | null>(null);
 
+  // Use refs to keep the solve callback stable across renders
+  const stateRef = useRef(state);
+  const sizeRef = useRef(size);
+  const imagesRef = useRef(stickerImages);
+  const orientationsRef = useRef(stickerOrientations);
+  stateRef.current = state;
+  sizeRef.current = size;
+  imagesRef.current = stickerImages;
+  orientationsRef.current = stickerOrientations;
+
   const solve = useCallback(() => {
-    if (!validateState(state, size)) {
-      setError(describeColorIssue(state, size));
+    const s = stateRef.current;
+    const sz = sizeRef.current;
+    const imgs = imagesRef.current;
+    const oris = orientationsRef.current;
+    if (!validateState(s, sz)) {
+      setError(describeColorIssue(s, sz));
       return;
     }
     setError(null);
     try {
-      setCurrentState(state);
-      setStickerImages(stickerImages);
-      storeSetOrientations(stickerOrientations ?? createInitialOrientations(size));
-      const result = solveCube(state, size, stickerOrientations);
+      setCurrentState(s);
+      setStickerImages(imgs);
+      storeSetOrientations(oris ?? createInitialOrientations(sz));
+      const result = solveCube(s, sz, oris);
       setSolution(result.solution, result.steps);
       setAppStep("solution");
     } catch (e: unknown) {
@@ -60,7 +74,7 @@ export function useSolve(
         e instanceof Error ? e.message : "求解失败，请检查魔方状态是否正确";
       setError(msg);
     }
-  }, [state, size, stickerImages, stickerOrientations, setCurrentState, setStickerImages, storeSetOrientations, setSolution, setAppStep]);
+  }, [setCurrentState, setStickerImages, storeSetOrientations, setSolution, setAppStep]);
 
   const clearError = useCallback(() => setError(null), []);
 
