@@ -73,52 +73,75 @@ function useStickerTexture(imageUrl: string | null): THREE.CanvasTexture | null 
 
     let cancelled = false;
 
-    // For data URLs, don't set crossOrigin (Safari blocks it)
-    const img = new window.Image();
-    if (!imageUrl.startsWith("data:")) {
-      img.crossOrigin = "anonymous";
-    }
-    img.onload = () => {
-      if (cancelled) return;
-      try {
-        const canvas = document.createElement("canvas");
-        // Use power-of-two dimensions for better mobile Safari compatibility
-        const w = img.width;
-        const h = img.height;
-        canvas.width = w > 0 ? w : 1;
-        canvas.height = h > 0 ? h : 1;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.needsUpdate = true;
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.LinearFilter;
-        setTexture(tex);
-      } catch {
-        // Silently handle canvas creation errors on mobile
+    try {
+      // For data URLs, create canvas directly (more reliable on mobile Safari)
+      if (imageUrl.startsWith("data:")) {
+        const img = new window.Image();
+        img.onload = () => {
+          if (cancelled) return;
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width || 1;
+            canvas.height = img.height || 1;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              const tex = new THREE.CanvasTexture(canvas);
+              tex.needsUpdate = true;
+              tex.minFilter = THREE.LinearFilter;
+              tex.magFilter = THREE.LinearFilter;
+              setTexture(tex);
+            }
+          } catch {}
+        };
+        img.onerror = () => {
+          if (cancelled) return;
+          // Create placeholder on error
+          const canvas = document.createElement("canvas");
+          canvas.width = 1; canvas.height = 1;
+          const ctx = canvas.getContext("2d");
+          if (ctx) { ctx.fillStyle = "#888"; ctx.fillRect(0, 0, 1, 1); }
+          const tex = new THREE.CanvasTexture(canvas);
+          tex.needsUpdate = true;
+          setTexture(tex);
+        };
+        img.src = imageUrl;
+      } else {
+        // For HTTP URLs, use crossOrigin
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          if (cancelled) return;
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width || 1;
+            canvas.height = img.height || 1;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              const tex = new THREE.CanvasTexture(canvas);
+              tex.needsUpdate = true;
+              tex.minFilter = THREE.LinearFilter;
+              tex.magFilter = THREE.LinearFilter;
+              setTexture(tex);
+            }
+          } catch {}
+        };
+        img.onerror = () => {
+          if (cancelled) return;
+          const canvas = document.createElement("canvas");
+          canvas.width = 1; canvas.height = 1;
+          const ctx = canvas.getContext("2d");
+          if (ctx) { ctx.fillStyle = "#888"; ctx.fillRect(0, 0, 1, 1); }
+          const tex = new THREE.CanvasTexture(canvas);
+          tex.needsUpdate = true;
+          setTexture(tex);
+        };
+        img.src = imageUrl;
       }
-    };
-    img.onerror = () => {
-      // Fallback: create a placeholder texture
-      if (cancelled) return;
-      const canvas = document.createElement("canvas");
-      canvas.width = 1;
-      canvas.height = 1;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.fillStyle = "#888";
-        ctx.fillRect(0, 0, 1, 1);
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.needsUpdate = true;
-        setTexture(tex);
-      }
-    };
-    img.src = imageUrl;
+    } catch {}
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [imageUrl]);
 
   // Dispose texture on unmount

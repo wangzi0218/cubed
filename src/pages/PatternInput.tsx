@@ -308,7 +308,7 @@ export function PatternInput() {
         ]} />
       </div>
 
-      {/* Simplified sticker action popup */}
+      {/* Sticker action popup */}
       {stickerActionFace !== null && isPattern && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>
           <div className="bg-card rounded-xl p-6 max-w-xs w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
@@ -319,6 +319,23 @@ export function PatternInput() {
             <Button variant="outline" className="w-full gap-2" onClick={handleRotateSticker}>
               <RotateCw className="w-4 h-4" /> 旋转 90°
             </Button>
+            <p className="text-xs text-muted-foreground text-center">移动到：</p>
+            <div className="grid grid-cols-3 gap-2">
+              {FACE_ORDER.map((f, i) => (
+                <Button key={f} variant="outline" size="sm" disabled={i === stickerActionFace}
+                  onClick={() => {
+                    if (stickerActionFace === null || stickerActionPos === null) return;
+                    const spf = cubeSize * cubeSize;
+                    const si = stickerActionFace * spf + stickerActionPos;
+                    const ti = i * spf + stickerActionPos;
+                    setStickers((p) => { const n = [...p], s = [...(n[stickerActionFace!] ?? [])], t = [...(n[i] ?? [])], tmp = s[stickerActionPos!]; s[stickerActionPos!] = t[stickerActionPos!]; t[stickerActionPos!] = tmp; n[stickerActionFace!] = s; n[i] = t; return n; });
+                    setStickerColors((p) => { const n = [...p]; const tmp = n[si]; n[si] = n[ti]; n[ti] = tmp; return n; });
+                    setStickerOrientations((p) => { const n = [...p]; const tmp = n[si]; n[si] = n[ti]; n[ti] = tmp; return n; });
+                    setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]);
+                  }}
+                >{FACE_CHINESE[f]}</Button>
+              ))}
+            </div>
             <Button variant="ghost" className="w-full" onClick={() => { setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]); }}>
               取消
             </Button>
