@@ -35,7 +35,7 @@ const cubeTypes = [
 ];
 
 export function CubeTypeSelect() {
-  const { setAppStep, setCubeSize, flowOrigin } = useCubeStore();
+  const { setAppStep, setCubeSize } = useCubeStore();
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
@@ -65,7 +65,7 @@ export function CubeTypeSelect() {
               clickable
               onClick={() => {
                 setCubeSize(ct.size);
-                setAppStep(flowOrigin === "scramble" ? "scramble" : "input-method");
+                setAppStep("input-method");
               }}
             >
               <CardHeader className="items-center text-center">

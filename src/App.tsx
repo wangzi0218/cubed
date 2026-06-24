@@ -6,9 +6,7 @@ import { ManualInput } from "@/pages/ManualInput";
 import { PhotoInput } from "@/pages/PhotoInput";
 import { TopologyInput } from "@/pages/TopologyInput";
 import { PatternInput } from "@/pages/PatternInput";
-import { Scramble } from "@/pages/Scramble";
 import { Solution } from "@/pages/Solution";
-import { Learn } from "@/pages/Learn";
 import { useCubeStore } from "@/stores/cube-store";
 
 function App() {
@@ -29,12 +27,8 @@ function App() {
         if (inputMethod === "topology") return <TopologyInput />;
         return <ManualInput />;
       }
-      case "scramble":
-        return <Scramble />;
       case "solution":
         return <Solution />;
-      case "learn":
-        return <Learn />;
       default:
         return <Home />;
     }

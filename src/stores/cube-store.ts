@@ -10,16 +10,10 @@ import type {
 import { createSolvedState } from "@/lib/cube-state";
 import { createInitialOrientations } from "@/lib/sticker-orientation";
 
-export type FlowOrigin = "solve" | "scramble" | "learn";
-
 interface CubeStore {
   // Navigation
   appStep: AppStep;
   setAppStep: (step: AppStep) => void;
-
-  // Flow origin — determines which path CubeTypeSelect navigates to
-  flowOrigin: FlowOrigin;
-  setFlowOrigin: (origin: FlowOrigin) => void;
 
   // Cube config
   cubeSize: CubeSize;
@@ -59,9 +53,6 @@ interface CubeStore {
 export const useCubeStore = create<CubeStore>((set, get) => ({
   appStep: "home",
   setAppStep: (step) => set({ appStep: step }),
-
-  flowOrigin: "solve",
-  setFlowOrigin: (origin) => set({ flowOrigin: origin }),
 
   cubeSize: 3,
   setCubeSize: (size) =>
@@ -123,7 +114,6 @@ export const useCubeStore = create<CubeStore>((set, get) => ({
   reset: () =>
     set({
       appStep: "home",
-      flowOrigin: "solve",
       cubeSize: 3,
       inputMethod: "manual",
       currentState: createSolvedState(3),

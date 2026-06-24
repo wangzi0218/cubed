@@ -51,6 +51,4 @@ export type AppStep =
   | "cube-type"
   | "input-method"
   | "input"
-  | "scramble"
-  | "solution"
-  | "learn";
+  | "solution";

@@ -16,7 +16,6 @@ export function Solution() {
     solutionSteps,
     currentStepIndex,
     isPlaying,
-    flowOrigin,
     currentState: storeState,
     stickerImages,
     stickerOrientations: storeOrientations,
@@ -77,8 +76,8 @@ export function Solution() {
   }, []);
 
   const handleBack = useCallback(
-    () => setAppStep(flowOrigin === "scramble" ? "scramble" : "input"),
-    [setAppStep, flowOrigin]
+    () => setAppStep("input"),
+    [setAppStep]
   );
 
   if (solution === null) {
