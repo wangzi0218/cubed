@@ -114,6 +114,7 @@ export function PatternInput() {
   const [stickerActionPos, setStickerActionPos] = useState<number | null>(null);
   const [highlightedStickers, setHighlightedStickers] = useState<number[]>([]);
   const [selectedColor, setSelectedColor] = useState<FaceColor>("U");
+  const [hasUserEdits, setHasUserEdits] = useState(false);
 
   const isPattern = cubeVariant === "pattern";
   const stickerImages = useMemo(() => { const f = stickers.flat(); return f.every((s) => s !== null) ? (f as string[]) : undefined; }, [stickers]);
@@ -158,7 +159,7 @@ export function PatternInput() {
   const handleBackToCapture = useCallback(() => { setPhase("capture"); setCaptureIdx(0); }, []);
 
   const handleStickerClick = useCallback((faceIdx: number, pos: number) => {
-    if (isPattern) { const idx = faceIdx * cubeSize * cubeSize + pos; setStickerOrientations((p) => { const n = [...p]; n[idx] = ((p[idx] ?? 0) + 1) % 4; return n; }); }
+    if (isPattern) { const idx = faceIdx * cubeSize * cubeSize + pos; setStickerOrientations((p) => { const n = [...p]; n[idx] = ((p[idx] ?? 0) + 1) % 4; return n; }); setHasUserEdits(true); }
   }, [cubeSize, isPattern]);
 
   const handleStickerAction = useCallback((faceIdx: number, pos: number) => {
@@ -180,6 +181,7 @@ export function PatternInput() {
       }
       return next;
     });
+    setHasUserEdits(true);
     setStickerActionFace(null);
     setStickerActionPos(null);
     setHighlightedStickers([]);
@@ -304,7 +306,7 @@ export function PatternInput() {
 
         <ActionBar actions={[
           { label: "重新拍摄", icon: RotateCcw, onClick: handleBackToCapture, variant: "outline" },
-          { label: "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting || incompleteFaces > 0 },
+          { label: isPattern && !hasUserEdits ? "请先调整贴纸" : "开始求解", icon: Zap, onClick: solve, flex: true, disabled: extracting || incompleteFaces > 0 || (isPattern && !hasUserEdits) },
         ]} />
       </div>
 
@@ -331,6 +333,7 @@ export function PatternInput() {
                     setStickers((p) => { const n = [...p], s = [...(n[stickerActionFace!] ?? [])], t = [...(n[i] ?? [])], tmp = s[stickerActionPos!]; s[stickerActionPos!] = t[stickerActionPos!]; t[stickerActionPos!] = tmp; n[stickerActionFace!] = s; n[i] = t; return n; });
                     setStickerColors((p) => { const n = [...p]; const tmp = n[si]; n[si] = n[ti]; n[ti] = tmp; return n; });
                     setStickerOrientations((p) => { const n = [...p]; const tmp = n[si]; n[si] = n[ti]; n[ti] = tmp; return n; });
+                    setHasUserEdits(true);
                     setStickerActionFace(null); setStickerActionPos(null); setHighlightedStickers([]);
                   }}
                 >{FACE_CHINESE[f]}</Button>
