@@ -119,23 +119,13 @@ export function PatternInput() {
   const stickerImages = useMemo(() => { const f = stickers.flat(); return f.every((s) => s !== null) ? (f as string[]) : undefined; }, [stickers]);
   const { error, solve } = useSolve(stickerColors, cubeSize, stickerImages, isPattern ? stickerOrientations : undefined);
 
-  // Use refs to avoid re-triggering the extraction effect
-  const photosRef = useRef(photos);
-  const photoRotationsRef = useRef(photoRotations);
-  const cubeSizeRef = useRef(cubeSize);
-  const cubeVariantRef = useRef(cubeVariant);
-  useEffect(() => { photosRef.current = photos; }, [photos]);
-  useEffect(() => { photoRotationsRef.current = photoRotations; }, [photoRotations]);
-  useEffect(() => { cubeSizeRef.current = cubeSize; }, [cubeSize]);
-  useEffect(() => { cubeVariantRef.current = cubeVariant; }, [cubeVariant]);
-
-  // Extraction — only depends on phase, reads other values from refs
+  // Extraction — runs once when entering confirm phase
   const prevPhaseRef = useRef(phase);
   useEffect(() => {
     if (prevPhaseRef.current !== "confirm" && phase === "confirm" && !extractedRef.current) {
       prevPhaseRef.current = phase; extractedRef.current = true;
       let cancelled = false; setExtracting(true);
-      const p = photosRef.current, pr = photoRotationsRef.current, cs = cubeSizeRef.current, cv = cubeVariantRef.current;
+      const p = photos, pr = photoRotations, cs = cubeSize, cv = cubeVariant;
       (async () => {
         const { extractFaceStickersFromDataUrl, applyRotation } = await import("@/lib/pattern-extraction");
         const { classifyStickerColor } = await import("@/lib/image-utils");
